@@ -1,5 +1,6 @@
 # Dự đoán giá vàng
 Đồ án cuối kỳ môn học MTH10605 - Python cho Khoa học dữ liệu
+
 Giảng viên: ThS. Hà Minh Tuấn
 
 ## Thông tin thành viên 
