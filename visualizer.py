@@ -5,7 +5,7 @@ import logging
 
 import matplotlib.pyplot as plt
 
-class Visualization:
+class Visualizer:
     """
     Lớp trực quan hóa dữ liệu chuyên sâu cho Time Series.
     Tập trung vào EDA: Xu hướng (Trend), Mùa vụ (Seasonality), và Tương quan (Correlation).
@@ -511,4 +511,5 @@ class Visualization:
         print("\n--- 5. PRICE ACTION ---")
         self.plot_candlestick()
         
+
         self.logger.info("Hoàn tất báo cáo.")
