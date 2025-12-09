@@ -49,7 +49,7 @@ print("\n Xóa trùng lặp...")
 df=preprocessor.check_and_drop_duplicates()
 
 # Tự động tìm lỗi dùng sai dấu . thành , và thay thế
-df=preprocessor.clean_numeric_format()
+df=preprocessor.clean_decimal_format()
 
 # Kiểm tra số NaN cho tất cả các cột
 nan_counts = df.isna().sum()
@@ -101,3 +101,4 @@ overview.df = df
 # Gọi hàm export()
 OUTPUT_FILE_PATH = "Output.csv"
 overview.export(path=OUTPUT_FILE_PATH)
+
