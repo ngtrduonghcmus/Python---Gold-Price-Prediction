@@ -240,7 +240,7 @@ class DataPreprocessor:
     # ************************************************
     # 6. XỬ LÝ ĐỊNH DẠNG SỐ
     # ************************************************
-    def clean_numeric_format(self, date_col_name: str = 'Date') -> pd.DataFrame:
+    def clean_decimal_format(self, date_col_name: str = 'Date') -> pd.DataFrame:
         """
         Kiểm tra các cột có kiểu dữ liệu 'object' (ngoại trừ cột ngày tháng),
         thay thế dấu ',' bằng dấu '.' (nếu có) và chuyển về kiểu float.
@@ -662,3 +662,4 @@ class DataScaler:
             raise ValueError("Phương pháp chuẩn hóa không hợp lệ! (standard, minmax, custom)")
 
         return self.df
+
