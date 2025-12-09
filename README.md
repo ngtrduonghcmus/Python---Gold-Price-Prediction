@@ -11,6 +11,7 @@ Giảng viên: ThS. Hà Minh Tuấn
 ## Giới thiệu bài toán
 
 ## Cấu trúc thư mục
+```
 project/
 ├── preprocessing/
 │   ├── data_loader.py
@@ -23,5 +24,5 @@ project/
 │   │   └── Scaler
 ├── training/
 │   ├── 
-
+```
 ## Hướng dẫn cài đặt
