@@ -23,8 +23,8 @@ print("Thống kê mô tả:")
 analyzer.get_describe_stats()
 
 # Báo cáo Trực quan tự động (Chạy Visualizer)
-# print(" Báo cáo Trực quan Tự động:")
-# visualizer.full_report()
+print(" Báo cáo Trực quan Tự động:")
+visualizer.full_report()
 
 """#TIỀN XỬ LÝ DỮ LIỆU"""
 
@@ -56,11 +56,12 @@ nan_counts = df.isna().sum()
 nan_counts = nan_counts[nan_counts > 0]
 nan_counts
 
-"""- **Các cột có giá trị NaN** (High, SP_Ajclose, DJ_low, EG_open, EG_high, EG_low, EU_Price, EU_high, OF_Price, OS_Price):  
-  - Số lượng NaN nhỏ (1-2 giá trị mỗi cột).  
-  - Các chỉ số này biến động **khá nhỏ trong một giai đoạn ngắn**, nên thay NaN bằng **phương pháp nội suy 10 giá trị xung quang**.  
-  - Không nên thay bằng trung bình toàn bộ cột, vì dữ liệu trải dài theo thời gian và biến động lớn theo giai đoạn dài.  
-  - Cách làm này giữ được **tính liên tục cục bộ** và phản ánh sát giá trị thực tế trong khoảng thời gian gần đó.
+"""
+    - **Các cột có giá trị NaN** (High, SP_Ajclose, DJ_low, EG_open, EG_high, EG_low, EU_Price, EU_high, OF_Price, OS_Price):  
+    - Số lượng NaN nhỏ (1-2 giá trị mỗi cột).  
+    - Các chỉ số này biến động **khá nhỏ trong một giai đoạn ngắn**, nên thay NaN bằng **phương pháp nội suy 10 giá trị xung quang**.  
+    - Không nên thay bằng trung bình toàn bộ cột, vì dữ liệu trải dài theo thời gian và biến động lớn theo giai đoạn dài.  
+    - Cách làm này giữ được **tính liên tục cục bộ** và phản ánh sát giá trị thực tế trong khoảng thời gian gần đó.
 """
 
 # Thay giá trị NaN bằng cách nội suy 10 giá trị xung quanh
@@ -76,8 +77,8 @@ df=preprocessor.auto_convert()
 
 visualizer.df = df
 # Gọi hàm full_report()
-# print(" Báo cáo Trực quan Tự động:")
-# visualizer.full_report()
+print(" Báo cáo Trực quan Tự động:")
+visualizer.full_report()
 
 """#CHUẨN HÓA DỮ LIỆU SỐ (DataScaler)"""
 
