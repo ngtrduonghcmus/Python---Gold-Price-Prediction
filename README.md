@@ -11,5 +11,17 @@ Giảng viên: ThS. Hà Minh Tuấn
 ## Giới thiệu bài toán
 
 ## Cấu trúc thư mục
+project/
+├── preprocessing/
+│   ├── data_loader.py
+│   │   └── DataLoader
+│   ├── eda.py
+│   │   └── StatisticsAnalyzer
+│   │   └── Visualizer
+│   ├── preprocessing.py
+│   │   └── DataPreprocessor
+│   │   └── Scaler
+├── training/
+│   ├── 
 
 ## Hướng dẫn cài đặt
