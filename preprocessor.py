@@ -1,289 +1,664 @@
 import pandas as pd
 import numpy as np
-import logging
-import os
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from IPython.display import display
-
-###########################################################
-###---class DataPreprocessor---###
-###########################################################
+import datetime
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, MinMaxScaler
+from sklearn.ensemble import IsolationForest
+from scipy.stats import zscore
+from pandas.api.types import is_numeric_dtype
 
 class DataPreprocessor:
     """
-    DataPreprocessor
-    ----------------
-    Chịu trách nhiệm ETL cơ bản:
-    1. Đọc dữ liệu (Read).
-    2. Làm sạch cấu trúc và giá trị (Clean).
-    3. Chuẩn hóa dữ liệu (Normalize).
-    4. Xuất dữ liệu sạch (Export).
+    Lớp thực hiện làm sạch dữ liệu như điền các giá trị khuyết, chuẩn hoá định
+    dạng kiểu dữ liệu, loại bỏ nhiễu và dữ liệu dư thừa.
     """
-    ###########################################################
-    ###---0. KHỞI TẠO & CẤU HÌNH---###
-    ###########################################################
-    def __init__(self, filepath: str = None):
+    def __init__(self, df: pd.DataFrame, encoders: dict):
         """
-        Khởi tạo đối tượng DataPreprocessor.
-        Args:
-            filepath (str): Đường dẫn file dữ liệu đầu vào.
+        Khởi tạo đối tượng với DataFrame và bộ mã hóa (cho LabelEncoder).
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Bộ dữ liệu cần tiền xử lý.
+        encoders : dict
+            Dict để lưu trữ các LabelEncoder đã fit.
         """
-        self.filepath = filepath
-        self._df = None
-        self.scalers = {}  # Lưu scaler để có thể inverse_transform sau này nếu cần
-        
-        # Cấu hình Logger
-        self.logger = logging.getLogger(self.__class__.__name__)
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.setLevel(logging.INFO)
-            self.logger.addHandler(handler)
+        self.df = df
+        self.encoders = encoders
 
-    ###########################################################
-    ###---PROPERTY — DataFrame---###
-    ###########################################################
+    # ************************************************
+    # 1. FILL DATE NA (Phương pháp nội suy ngày tháng)
+    # ************************************************
+    def clean_date_column(self, column_name: str = 'Date') -> pd.DataFrame:
+            """
+            Xử lý cột ngày tháng: Chuyển đổi, nội suy, loại bỏ trùng lặp và sắp xếp.
+            Đảm bảo mỗi ngày là duy nhất và xếp theo thứ tự tăng dần.
+            """
+            # 1. Chuyển đổi sang kiểu datetime, ép buộc lỗi thành NaT
+            self.df[column_name] = pd.to_datetime(
+                self.df[column_name],
+                errors='coerce',
+                format='%m/%d/%Y'
+            )
 
-    @property
-    def df(self):
-        return self._df
+            print(f"Bắt đầu nội suy các giá trị bị thiếu trong cột '{column_name}'...")
 
-    @df.setter
-    def df(self, new_df):
-        if new_df is not None and not isinstance(new_df, pd.DataFrame):
-            raise ValueError("Dữ liệu gán vào phải là pandas DataFrame.")
-        self._df = new_df
+            # 2. Xử lý nội suy (giữ nguyên logic của bạn)
+            date_ordinal = self.df[column_name].apply(
+                lambda x: x.toordinal() if pd.notna(x) else np.nan
+            )
+            date_ordinal_filled = date_ordinal.interpolate(method='linear')
+            date_ordinal_filled = date_ordinal_filled.round().astype('Int64')
 
-    def __repr__(self):
-        rows = 0 if self.df is None else len(self.df)
-        cols = 0 if self.df is None else len(self.df.columns)
-        return f"<{self.__class__.__name__} source='{self.filepath}' shape=({rows}, {cols})>"
+            self.df[column_name] = date_ordinal_filled.apply(
+                lambda x: datetime.date.fromordinal(x) if pd.notna(x) else pd.NaT
+            )
+            self.df[column_name] = pd.to_datetime(self.df[column_name])
 
-    ###########################################################
-    ###---1. ĐỌC DỮ LIỆU---###
-    ###########################################################
+            print(f"Đã nội suy cột '{column_name}'.")
 
-    def read_data(self):
-        """Đọc dữ liệu từ file nguồn (CSV, Excel, JSON)."""
-        if not self.filepath:
-            raise ValueError("Filepath chưa được cung cấp.")
-        
-        if not os.path.exists(self.filepath):
-            raise FileNotFoundError(f"Không tìm thấy file: {self.filepath}")
+            # 3. LOẠI BỎ CÁC NGÀY TRÙNG LẶP (BƯỚC BỔ SUNG ĐỂ ĐẢM BẢO TÍNH DUY NHẤT)
+            initial_rows = len(self.df)
+            self.df.drop_duplicates(subset=[column_name], keep='first', inplace=True)
+            dropped_rows = initial_rows - len(self.df)
 
-        ext = os.path.splitext(self.filepath)[1].lower()
-        try:
-            if ext == ".csv":
-                self.df = pd.read_csv(self.filepath)
-            elif ext in [".xlsx", ".xls"]:
-                self.df = pd.read_excel(self.filepath)
-            elif ext == ".json":
-                self.df = pd.read_json(self.filepath)
-            else:
-                raise ValueError(f"Định dạng file '{ext}' không hỗ trợ.")
+            if dropped_rows > 0:
+                print(f"Đã loại bỏ {dropped_rows} hàng trùng lặp theo cột '{column_name}'.")
 
-            self.logger.info(f"Đã đọc dữ liệu. Shape: {self.df.shape}")
-            return self  # Trả về self để hỗ trợ method chaining
-        except Exception as e:
-            self.logger.error(f"Lỗi đọc file: {e}")
-            raise
-        
-    ###########################################################
-    ###---1.1. THÔNG TIN CƠ BẢN---###
-    ###########################################################
+            # 4. Sắp xếp lại và đặt lại chỉ mục (như ban đầu)
+            self.df.sort_values(by=column_name, inplace=True)
+            self.df.reset_index(drop=True, inplace=True)
 
-    def basic_info(self):
+            print(f"Đã sắp xếp lại và reset index.")
+            print(f"Cột '{column_name}' đã được chuyển đổi sang kiểu: {self.df[column_name].dtype}")
+
+            return self.df
+    # ************************************************
+    # 2. XỬ LÝ CỘT NGÀY (Chuẩn hóa định dạng)
+    # ************************************************
+    def process_datetime_column(self, col="Date"):
         """
-        Hiển thị thông tin tổng quan, thống kê mô tả và kiểm tra giá trị thiếu.
+        Chuẩn hóa cột ngày theo nhiều định dạng khác nhau, tự phát hiện dạng ngày,
+        cố gắng chuyển về Timestamp chính xác.
+
+        Tham số
+        -------
+        col : str
+            Tên cột cần xử lý.
+
+        Trả về
+        -------
+        DataFrame
+            DataFrame sau khi chuẩn hóa cột ngày.
         """
-        if self.df is None:
-            print("DataFrame rỗng. Vui lòng gọi read_data() trước.")
-            return
+        def _normalize(x):
+            if pd.isna(x):
+                return pd.NaT
+            if isinstance(x, (pd.Timestamp, datetime.datetime, datetime.date)):
+                return pd.to_datetime(x, errors="coerce")
 
-        print("\n--- INFO ---")
-        self.df.info()
+            x = str(x).strip()
+            dt = pd.to_datetime(x, errors="coerce", dayfirst=False)
+            if pd.notna(dt):
+                return dt
 
-        print("\n--- DESCRIBE ---")
-        display(self.df.describe(include="all").T)
+            dt = pd.to_datetime(x, errors="coerce", dayfirst=True)
+            if pd.notna(dt):
+                return dt
 
-        print("\n--- NULL COUNT ---")
-        null_counts = self.df.isna().sum()
-        if null_counts.sum() > 0:
-            display(null_counts[null_counts > 0].to_frame(name="Missing Values"))
-        else:
-            print("Không có giá trị thiếu.")
+            x2 = x.replace(".", "/").replace("-", "/")
+            parts = x2.split("/")
 
-    ###########################################################
-    ###---2. XỬ LÝ CẤU TRÚC (STRUCTURE)---###
-    ###########################################################
+            if len(parts) == 3:
+                try:
+                    a, b, c = map(int, parts)
+                    if c > 31: # Xem c là năm
+                        if a <= 12 and b > 12: # Y M D
+                            return pd.Timestamp(year=c, month=a, day=b)
+                        if b <= 12 and a > 12: # Y D M (Trường hợp ít xảy ra nhưng cân nhắc)
+                            return pd.Timestamp(year=c, month=b, day=a)
+                        return pd.Timestamp(year=c, month=a, day=b) # Y M D
+                    if a > 31: # Xem a là năm
+                        return pd.Timestamp(year=a, month=b, day=c) # Y M D
+                except:
+                    pass
+            return pd.NaT
 
-    def clean_structure(self):
-        """
-        Tổng hợp làm sạch cấu trúc:
-        1. Xóa cột rác (Empty, Unnamed).
-        2. Chuyển đổi định dạng số (xử lý dấu phẩy '1,234.56').
-        """
-        if self.df is None: return self
-
-        # 1. Xóa cột rác
-        junk_keywords = ["Empty", "Unnamed"]
-        initial_cols = self.df.columns
-        # Lọc các cột chứa từ khóa rác hoặc toàn bộ là NaN
-        cols_to_drop = [c for c in initial_cols if any(k in c for k in junk_keywords)]
-        all_na_cols = self.df.columns[self.df.isna().all()].tolist()
-        cols_to_drop = list(set(cols_to_drop + all_na_cols))
-
-        if cols_to_drop:
-            self.df.drop(columns=cols_to_drop, inplace=True)
-            self.logger.info(f"✓ Đã xóa {len(cols_to_drop)} cột rác.")
-
-        # 2. Chuyển đổi String sang Float (Tối ưu hóa Vectorization)
-        obj_cols = self.df.select_dtypes(include='object').columns
-        converted_count = 0
-        
-        for col in obj_cols:
-            if "date" in col.lower(): continue # Bỏ qua cột ngày
-            try:
-                # Thử chuyển đổi nhanh
-                # Logic: Xóa dấu ',' rồi ép kiểu. 'coerce' sẽ biến lỗi thành NaN
-                series_clean = self.df[col].astype(str).str.replace(',', '', regex=False)
-                self.df[col] = pd.to_numeric(series_clean, errors='coerce')
-                converted_count += 1
-            except Exception:
-                continue
-                
-        if converted_count > 0:
-            self.logger.info(f"✓ Đã sửa định dạng số liệu cho {converted_count} cột.")
-            
-        return self
-
-    ###########################################################
-    ###---3. XỬ LÝ THỜI GIAN (DATETIME)---###
-    ###########################################################
-
-    def process_datetime(self, col: str = "Date"):
-        """Chuẩn hóa cột thời gian, sắp xếp và set index."""
-        if self.df is None: return self
-        if col not in self.df.columns:
-            self.logger.warning(f"Không tìm thấy cột thời gian '{col}'. Bỏ qua bước này.")
-            return self
-
-        # Chuyển đổi
-        self.df[col] = pd.to_datetime(self.df[col], errors='coerce', dayfirst=False)
-        
-        # Xóa dòng không có ngày tháng
-        self.df.dropna(subset=[col], inplace=True)
-        
-        # Sắp xếp và Set Index
-        self.df.sort_values(col, inplace=True)
-        self.df.set_index(col, inplace=True)
-        
-        # Xóa trùng lặp Index (nếu có, giữ giá trị cuối cùng)
-        if self.df.index.duplicated().any():
-            dup_count = self.df.index.duplicated().sum()
-            self.df = self.df[~self.df.index.duplicated(keep='last')]
-            self.logger.info(f"✓ Đã xóa {dup_count} mốc thời gian trùng lặp.")
-
-        self.logger.info("✓ Đã chuẩn hóa DateTime.")
-        return self
-    
-    ###########################################################
-    ###---4. XỬ LÝ GIÁ TRỊ THIẾU & NGOẠI LAI---###
-    ###########################################################
-
-    def clean_values(self):
-        """
-        Xử lý giá trị nội tại:
-        1. Điền giá trị thiếu (Interpolate cho Time Series).
-        2. Xử lý ngoại lai (Capping - Giới hạn biên).
-        """
-        if self.df is None: return self
-
-        # 1. Fill Missing Values (Ưu tiên Interpolate Time)
-        numeric_cols = self.df.select_dtypes(include=np.number).columns
-        self.df[numeric_cols] = self.df[numeric_cols].interpolate(method='time').ffill().bfill()
-        
-        # Fill Categorical bằng Mode
-        cat_cols = self.df.select_dtypes(exclude=np.number).columns
-        for c in cat_cols:
-            if self.df[c].isna().any():
-                self.df[c] = self.df[c].fillna(self.df[c].mode()[0])
-
-        # 2. Handle Outliers (Capping 3-Sigma)
-        # Không xóa dòng để tránh đứt gãy chuỗi thời gian
-        capped_count = 0
-        for col in numeric_cols:
-            if self.df[col].nunique() < 10: continue # Bỏ qua cột ít giá trị (như biến cờ 0/1)
-            
-            mean, std = self.df[col].mean(), self.df[col].std()
-            upper = mean + 3 * std
-            lower = mean - 3 * std
-            
-            # Nếu có giá trị vượt ngưỡng thì mới xử lý
-            if (self.df[col] > upper).any() or (self.df[col] < lower).any():
-                self.df[col] = self.df[col].clip(lower=lower, upper=upper)
-                capped_count += 1
-                
-        self.logger.info(f"✓ Đã điền giá trị thiếu và giới hạn ngoại lai ({capped_count} cột).")
-        return self
-    
-    ###########################################################
-    ###---5. CHUẨN HÓA DỮ LIỆU (NORMALIZATION)---###
-    ###########################################################
-
-    def normalize_data(self, method: str = 'minmax', exclude_cols: list = None):
-        """
-        Chuẩn hóa dữ liệu về cùng phạm vi (Scale).
-        Args:
-            method: 'minmax' (0-1) hoặc 'standard' (mean=0, std=1).
-            exclude_cols: Danh sách các cột KHÔNG cần chuẩn hóa (ví dụ cột Target nếu muốn giữ nguyên giá).
-        """
-        if self.df is None: return self
-
-        if method == 'minmax':
-            scaler = MinMaxScaler()
-        elif method == 'standard':
-            scaler = StandardScaler()
-        else:
-            raise ValueError("Method chỉ hỗ trợ 'minmax' hoặc 'standard'.")
-
-        # Xác định các cột cần scale (chỉ cột số)
-        numeric_cols = self.df.select_dtypes(include=np.number).columns
-        if exclude_cols:
-            numeric_cols = [c for c in numeric_cols if c not in exclude_cols]
-
-        if len(numeric_cols) > 0:
-            self.df[numeric_cols] = scaler.fit_transform(self.df[numeric_cols])
-            self.scalers[method] = scaler # Lưu scaler
-            self.logger.info(f"✓ Đã chuẩn hóa dữ liệu ({method}) cho {len(numeric_cols)} cột.")
-        
-        return self
-    
-    ###########################################################
-    ###---6. PIPELINE & EXPORT---###
-    ###########################################################
-
-    def full_pipeline(self, output_path: str = "clean_data.csv"):
-        """
-        Chạy toàn bộ quy trình làm sạch và xuất file.
-        """
-        self.logger.info("=== BẮT ĐẦU QUY TRÌNH TIỀN XỬ LÝ ===")
-        
-        (self.read_data()
-             .clean_structure()
-             .process_datetime(col="Date")
-             .clean_values()
-             .normalize_data(method='minmax') # Mặc định chuẩn hóa luôn
-        )
-        
-        # Xuất file
-        self.df.to_csv(output_path)
-        self.logger.info(f"=== HOÀN TẤT. File đã lưu tại: {output_path} ===")
+        self.df[col] = self.df[col].apply(_normalize)
         return self.df
 
-# =========================================================
-# HƯỚNG DẪN SỬ DỤNG
-# =========================================================
-# preprocessor = DataPreprocessor('FINAL_USO_dirty.csv')
-# df_clean = preprocessor.full_pipeline('clean_data.csv')
+    # ************************************************
+    # 3. XOÁ CỘT / HÀNG CHẤT LƯỢNG THẤP
+    # ************************************************
+    def drop_low_valid_columns(self, threshold_ratio=2 / 3):
+        """
+        Xoá cột hoặc hàng có tỷ lệ giá trị hợp lệ dưới một ngưỡng nhất định.
+
+        Tham số
+        -------
+        threshold_ratio : float
+            Ngưỡng tỷ lệ (0–1), mặc định 2/3.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau khi loại bỏ cột/hàng chất lượng thấp.
+        """
+        total_rows = len(self.df)
+        threshold = total_rows * threshold_ratio
+
+        cols_to_drop = [col for col in self.df.columns if self.df[col].notna().sum() < threshold]
+        if cols_to_drop:
+            print(" Cột bị xoá:")
+            for col in cols_to_drop:
+                print(" -", col)
+            self.df.drop(columns=cols_to_drop, inplace=True)
+
+        total_cols = self.df.shape[1]
+        row_threshold = total_cols * threshold_ratio
+        rows_to_drop = self.df.index[self.df.notna().sum(axis=1) < row_threshold]
+
+        if len(rows_to_drop) > 0:
+            print("\n Hàng bị xoá:")
+            for r in rows_to_drop:
+                print(" - Index", r)
+            self.df.drop(index=rows_to_drop, inplace=True)
+
+        return self.df
+
+    # ************************************************
+    # 4. XOÁ TRÙNG LẶP
+    # ************************************************
+    def check_and_drop_duplicates(self):
+        """
+        Kiểm tra và xoá các hàng trùng lặp trong DataFrame.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau khi xoá trùng lặp và reset index.
+        """
+        print("Các hàng trùng lặp:")
+        duplicate_rows = self.df[self.df.duplicated(keep=False)]
+        print(duplicate_rows)
+
+        self.df = self.df.drop_duplicates().reset_index(drop=True)
+        print("\nSố hàng sau khi xoá trùng:", len(self.df))
+        return self.df
+
+    # ************************************************
+    # 5. ĐIỀN GIÁ TRỊ THIẾU
+    # ************************************************
+
+    def fill_missing(self, strategy="median", custom_value=None, neighbors=None):
+        """
+        Điền giá trị thiếu cho toàn bộ DataFrame bằng nhiều chiến lược:
+        mean, median, mode, ffill, custom, interpolate.
+
+        Tham số
+        -------
+        strategy : str
+            Chiến lược điền giá trị.
+        custom_value : any
+            Giá trị điền thủ công (nếu dùng strategy='custom').
+        neighbors : int hoặc None
+            Giới hạn số lượng giá trị lân cận khi nội suy.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau khi điền giá trị thiếu.
+        """
+        for col in self.df.columns:
+            if self.df[col].isnull().sum() == 0:
+                continue
+
+            try:
+                if strategy == "mean":
+                    self.df[col] = self.df[col].fillna(self.df[col].mean())
+                elif strategy == "median":
+                    self.df[col] = self.df[col].fillna(self.df[col].median())
+                elif strategy == "mode":
+                    self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
+                elif strategy == "ffill":
+                    self.df[col] = self.df[col].fillna(method="ffill")
+                elif strategy == "custom":
+                    self.df[col] = self.df[col].fillna(custom_value)
+                elif strategy == "interpolate":
+                    if neighbors is None:
+                        self.df[col] = self.df[col].interpolate(method='linear')
+                    else:
+                        self.df[col] = self.df[col].interpolate(
+                            method='linear',
+                            limit=neighbors,
+                            limit_direction='both'
+                        )
+            except:
+                self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
+
+        return self.df
+
+    # ************************************************
+    # 6. XỬ LÝ ĐỊNH DẠNG SỐ
+    # ************************************************
+    def clean_numeric_format(self, date_col_name: str = 'Date') -> pd.DataFrame:
+        """
+        Kiểm tra các cột có kiểu dữ liệu 'object' (ngoại trừ cột ngày tháng),
+        thay thế dấu ',' bằng dấu '.' (nếu có) và chuyển về kiểu float.
+
+        Tham số:
+            date_col_name (str): Tên cột ngày tháng để loại trừ khỏi quá trình kiểm tra.
+
+        Trả về:
+            pd.DataFrame: DataFrame sau khi làm sạch định dạng số.
+        """
+        df_cleaned = self.df
+        object_cols = df_cleaned.select_dtypes(include=['object']).columns.tolist()
+
+        # Loại bỏ cột ngày tháng khỏi danh sách cần kiểm tra
+        if date_col_name in object_cols:
+            object_cols.remove(date_col_name)
+
+        cleaned_cols = []
+
+        for col in object_cols:
+            try:
+                # Lấy cột dưới dạng chuỗi
+                col_as_str = df_cleaned[col].astype(str)
+
+                # Chỉ thay thế và chuyển đổi nếu cột có chứa dấu phẩy
+                if col_as_str.str.contains(',', regex=False).any():
+                    print(f" Đang làm sạch định dạng số cho cột '{col}'...")
+                    # Thay thế dấu phẩy bằng dấu chấm và chuyển về float
+                    df_cleaned[col] = (col_as_str
+                                        .str.replace(',', '.', regex=False)
+                                        .astype(float))
+                    cleaned_cols.append(col)
+                else:
+                    # Thử chuyển đổi sang số cho tất cả các cột object còn lại
+                    df_cleaned[col] = pd.to_numeric(col_as_str, errors='coerce')
+                    # Kiểm tra nếu kiểu dữ liệu đã chuyển thành số thực (float) hoặc số nguyên (int)
+                    if df_cleaned[col].dtype.kind in 'fi' and col not in cleaned_cols:
+                        cleaned_cols.append(col)
+
+            except Exception as e:
+                print(f" Lỗi không thể chuyển đổi cột '{col}' sang float: {e}")
+
+        if cleaned_cols:
+            print(f" ✔ Đã chuyển đổi định dạng số/chuỗi số cho {len(cleaned_cols)} cột: {', '.join(cleaned_cols)}")
+        else:
+            print(" ✔ Không tìm thấy cột kiểu 'object' nào cần làm sạch định dạng số (ngoài cột ngày).")
+
+        self.df = df_cleaned
+        return self.df
+    # ************************************************
+    # 7. XỬ LÍ NGOẠI LAI
+    # ************************************************
+    @staticmethod
+    def detect_outliers_iqr(series):
+        """Phát hiện ngoại lai bằng phương pháp IQR."""
+        Q1, Q3 = series.quantile(0.25), series.quantile(0.75)
+        IQR = Q3 - Q1
+        return (series < Q1 - 1.5 * IQR) | (series > Q3 + 1.5 * IQR)
+
+    @staticmethod
+    def detect_outliers_zscore(series, threshold=3):
+        """Phát hiện ngoại lai bằng Z-score."""
+        # Chỉ áp dụng Z-score cho các giá trị đã điền đầy đủ
+        return abs(zscore(series.dropna())) > threshold
+
+    def handle_outliers(self, method="iqr"):
+        """
+        Xử lý ngoại lai bằng IQR, Z-score hoặc IsolationForest.
+        Giá trị ngoại lai được thay bằng NaN rồi điền lại bằng median.
+
+        Tham số
+        -------
+        method : str
+            iqr, zscore hoặc isolation_forest.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau khi xử lý ngoại lai.
+        """
+        numeric_cols = self.df.select_dtypes(include=np.number).columns
+
+        for col in numeric_cols:
+            if self.df[col].isnull().all():
+                continue # Bỏ qua cột rỗng
+
+            mask = pd.Series(False, index=self.df.index)
+
+            if method == "iqr":
+                mask = DataPreprocessor.detect_outliers_iqr(self.df[col])
+            elif method == "zscore":
+                data_clean = self.df[col].dropna()
+                if not data_clean.empty:
+                    outlier_indices = data_clean.index[DataPreprocessor.detect_outliers_zscore(data_clean)]
+                    mask[outlier_indices] = True
+            elif method == "isolation_forest":
+                data_clean = self.df[[col]].dropna()
+                if not data_clean.empty:
+                    iso = IsolationForest(contamination=0.01, random_state=42)
+                    preds = iso.fit_predict(data_clean)
+                    mask[data_clean.index[preds == -1]] = True
+            else:
+                raise ValueError("Phương pháp xử lý ngoại lai không hợp lệ!")
+
+            self.df.loc[mask, col] = np.nan # Thay ngoại lai bằng NaN
+
+        print(f" Đã thay thế ngoại lai bằng NaN ({method}).")
+
+        # Sau khi thay bằng NaN, điền lại bằng median
+        print(" Tiến hành điền lại giá trị thiếu bằng median...")
+        self.fill_missing("median")
+        return self.df
+
+    # ************************************************
+    # 8. CHUYỂN KIỂU MỘT CỘT
+    # ************************************************
+    def convert_dtype(self, column, dtype, errors='raise', format=None):
+        """
+        Chuyển kiểu dữ liệu cho một cột.
+
+        Tham số
+        -------
+        column : str
+            Tên cột.
+        dtype : str hoặc callable
+            Kiểu đích (int, float, str, bool, datetime, category).
+        errors : str
+            Nếu 'raise' sẽ báo lỗi, 'coerce' chuyển lỗi thành NaN.
+        format : str
+            Định dạng ngày sử dụng khi dtype='datetime'.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau chuyển kiểu.
+        """
+        if column not in self.df.columns:
+            print(f" Cột '{column}' không tồn tại.")
+            return self.df
+
+        if dtype in ["datetime", "date", "time"]:
+            if pd.api.types.is_datetime64_any_dtype(self.df[column]):
+                print(f" Cột '{column}' đã là datetime -> bỏ qua.")
+                return self.df
+
+        print(f" Chuyển kiểu '{column}' -> {dtype}")
+
+        try:
+            if callable(dtype):
+                self.df[column] = self.df[column].apply(dtype)
+            elif dtype in ["int", "integer"]:
+                self.df[column] = self.df[column].astype(float).astype("Int64")
+            elif dtype == "float":
+                self.df[column] = self.df[column].astype(float)
+            elif dtype == "str":
+                self.df[column] = self.df[column].astype(str)
+            elif dtype == "bool":
+                self.df[column] = self.df[column].astype(bool)
+            elif dtype in ["datetime", "date", "time"]:
+                self.df[column] = pd.to_datetime(self.df[column], errors=errors, format=format)
+            elif dtype == "category":
+                self.df[column] = self.df[column].astype("category")
+
+            print(" Thành công!")
+        except Exception as e:
+            print(f" Lỗi: {e}")
+            if errors == "raise":
+                raise e
+
+        return self.df
+
+    # ************************************************
+    # 9. CHUYỂN KIỂU NHIỀU CỘT
+    # ************************************************
+    def convert_dtypes_bulk(self, mapping, errors="raise"):
+        """
+        Chuyển kiểu hàng loạt cột.
+
+        Tham số
+        -------
+        mapping : dict hoặc (list, dtype)
+            dict: {cột: kiểu}
+            tuple: ([danh sách cột], kiểu)
+        errors : str
+            Điều khiển hành vi khi lỗi chuyển kiểu.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau chuyển kiểu.
+        """
+        if isinstance(mapping, dict):
+            for col, dtype in mapping.items():
+                self.convert_dtype(col, dtype, errors=errors)
+        elif isinstance(mapping, (list, tuple)) and len(mapping) == 2:
+            cols, dtype = mapping
+            for col in cols:
+                self.convert_dtype(col, dtype, errors=errors)
+        else:
+            print(" mapping phải là dict hoặc (list_cột, dtype)")
+        return self.df
+
+    # ************************************************
+    # 10. DỰ ĐOÁN KIỂU DỮ LIỆU
+    # ************************************************
+    def detect_best_dtype(self, series: pd.Series):
+        """
+        Dự đoán kiểu dữ liệu phù hợp nhất cho một cột.
+
+        Trả về
+        -------
+        str
+            Kiểu dữ liệu được gợi ý: int, float, bool, datetime, str, category.
+        """
+        s = series.dropna()
+
+        if pd.api.types.is_datetime64_any_dtype(s):
+            return "datetime"
+
+        if pd.api.types.is_numeric_dtype(s):
+            return "int" if (s % 1 == 0).all() else "float"
+
+        if s.dtype == object or pd.api.types.is_string_dtype(s):
+            if s.astype(str).str.contains(r"[-/:\.]").mean() > 0.3:
+                parsed = pd.to_datetime(s, errors="coerce", dayfirst=True)
+                if parsed.notna().mean() > 0.8:
+                    return "datetime"
+
+            if s.astype(str).str.lower().isin(["true", "false", "0", "1"]).mean() == 1:
+                return "bool"
+
+        if s.nunique() / len(s) < 0.05:
+            return "category"
+
+        return "str"
+
+    # ************************************************
+    # 11. AUTO CONVERT
+    # ************************************************
+    def auto_convert(self):
+        """
+        Tự động chuyển kiểu dữ liệu hợp lý cho toàn bộ DataFrame dựa trên detect_best_dtype().
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu sau chuyển đổi tự động.
+        """
+        print("\n BẮT ĐẦU TỰ ĐỘNG CHUYỂN KIỂU...\n")
+
+        changed = []
+
+        for col in self.df.columns:
+            cur = str(self.df[col].dtype)
+            best = self.detect_best_dtype(self.df[col])
+
+            if cur.startswith("int") or cur == "Int64":
+                current_logic = "int"
+            elif cur.startswith("float"):
+                current_logic = "float"
+            elif "datetime" in cur:
+                current_logic = "datetime"
+            elif cur == "bool":
+                current_logic = "bool"
+            elif "category" in cur:
+                current_logic = "category"
+            else:
+                current_logic = "str"
+
+            if current_logic != best:
+                print(f" {col}: {current_logic} -> {best}")
+                self.convert_dtype(col, best, errors="coerce")
+                changed.append((col, current_logic, best))
+            else:
+                print(f" {col} giữ nguyên ({current_logic})")
+
+        print("\n HOÀN TẤT!")
+        if changed:
+            print("🔧 Các cột đã chuyển kiểu:")
+            for c, old, new in changed:
+                print(f" - {c}: {old} -> {new}")
+        else:
+            print("✔ Không có cột nào cần chuyển kiểu.")
+
+        return self.df
+
+    # ************************************************
+    # 12. MÃ HÓA
+    # ************************************************
+    def label_encode(self, col):
+        """
+        Mã hóa cột dạng chuỗi thành số bằng Label Encoding.
+
+        Trả về
+        -------
+        DataFrame
+        """
+        if col not in self.df.columns:
+            print(f" Cột '{col}' không tồn tại.")
+            return self.df
+
+        le = LabelEncoder()
+        # Ép về string để LabelEncoder xử lý
+        data_clean = self.df[col].astype(str).dropna()
+        self.df[col].loc[data_clean.index] = le.fit_transform(data_clean)
+        self.encoders[col] = le
+        return self.df
+
+    def onehot_encode(self, col):
+        """
+        Mã hóa One-hot một cột (tạo nhiều cột nhị phân).
+
+        Trả về
+        -------
+        DataFrame
+        """
+        if col not in self.df.columns:
+            print(f" Cột '{col}' không tồn tại.")
+            return self.df
+
+        ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+
+        # Chỉ lấy các giá trị không thiếu để fit và transform
+        temp_df = self.df[[col]].astype(str) # Đảm bảo là chuỗi
+        arr = ohe.fit_transform(temp_df)
+
+        new_cols = [f"{col}_{c}" for c in ohe.categories_[0]]
+
+        # Tạo DataFrame mới cho các cột One-Hot
+        ohe_df = pd.DataFrame(arr, columns=new_cols, index=self.df.index)
+
+        # Nối lại
+        self.df = pd.concat([self.df.drop(columns=[col]), ohe_df], axis=1)
+        return self.df
+
+    @staticmethod
+    def text_to_number(text):
+        """
+        Chuyển chuỗi ký tự thành số bằng cách cộng mã ASCII từng ký tự.
+        """
+        return sum(ord(c) for c in str(text))
+
+    def apply_text_encoding(self, col):
+        """
+        Mã hóa chuỗi thành số theo hàm text_to_number().
+        """
+        if col not in self.df.columns:
+            print(f" Cột '{col}' không tồn tại.")
+            return self.df
+
+        self.df[col] = self.df[col].apply(DataPreprocessor.text_to_number)
+        return self.df
+    
+class DataScaler:
+    """
+    Lớp thực hiện biến đổi và chuẩn hoá dữ liệu để các mô hình học máy hoạt động ổn định.
+    """
+    def __init__(self, df: pd.DataFrame, scalers: dict):
+        """
+        Khởi tạo đối tượng với DataFrame và bộ scale (cho StandardScaler, MinMaxScaler).
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Bộ dữ liệu cần chuẩn hóa.
+        scalers : dict
+            Dict để lưu trữ các Scaler đã fit.
+        """
+        self.df = df
+        self.scalers = scalers
+
+    # ************************************************
+    # 1. CHUẨN HÓA DỮ LIỆU
+    # ************************************************
+    def scale(self, method="standard", columns=None):
+        """
+        Chuẩn hoá dữ liệu số bằng StandardScaler, MinMaxScaler hoặc custom scaling.
+
+        Tham số
+        -------
+        method : str
+            Kiểu chuẩn hóa: standard, minmax, custom.
+        columns : list, optional
+            Danh sách các cột số cần chuẩn hóa. Nếu None, sẽ chọn tất cả các cột số.
+
+        Trả về
+        -------
+        DataFrame
+            Dữ liệu đã chuẩn hóa.
+        """
+        if columns is None:
+            numeric_cols = self.df.select_dtypes(include=np.number).columns
+        else:
+            numeric_cols = [col for col in columns if col in self.df.columns and is_numeric_dtype(self.df[col])]
+
+        if numeric_cols.empty:
+            print(" Không có cột số nào để chuẩn hóa.")
+            return self.df
+
+        print(f" Chuẩn hóa bằng phương pháp '{method}' cho các cột: {list(numeric_cols)}")
+
+        if method == "standard":
+            scaler = StandardScaler()
+            self.df[numeric_cols] = scaler.fit_transform(self.df[numeric_cols])
+            self.scalers['standard'] = scaler
+        elif method == "minmax":
+            scaler = MinMaxScaler()
+            self.df[numeric_cols] = scaler.fit_transform(self.df[numeric_cols])
+            self.scalers['minmax'] = scaler
+        elif method == "custom":
+            for col in numeric_cols:
+                min_val = self.df[col].min()
+                max_val = self.df[col].max()
+                if max_val - min_val == 0:
+                    self.df[col] = 0 # Tránh chia cho 0
+                else:
+                    self.df[col] = (self.df[col] - min_val) / (max_val - min_val)
+        else:
+            raise ValueError("Phương pháp chuẩn hóa không hợp lệ! (standard, minmax, custom)")
+
+        return self.df
