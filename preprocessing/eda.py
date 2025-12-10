@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype
 from scipy.stats import gaussian_kde
+from utils.logger import Logger
 
 class StatisticsAnalyzer:
     """
@@ -18,6 +19,9 @@ class StatisticsAnalyzer:
             Bộ dữ liệu cần phân tích.
         """
         self.df = df.copy()
+        self.logger = Logger(name="StatisticsAnalyzer").get_logger()
+
+        self.logger.info(f"Khởi tạo StatisticsAnalyzer) với DataFrame gồm {len(self.df)} dòng và {len(self.df.columns)} cột.")
 
     # ************************************************
     # 1. THỐNG KÊ MÔ TẢ
@@ -26,18 +30,29 @@ class StatisticsAnalyzer:
         """
         In ra các thống kê mô tả của DataFrame cho cả cột số và cột phân loại.
         """
+        self.logger.info("Bắt đầu lấy thống kê mô tả cho DataFrame.")
         if self.df.empty:
-            print(" DataFrame trống.")
+            self.logger.warning("DataFrame trống, không thể lấy thống kê mô tả.")
             return
 
-        print("\n========== DESCRIBE (NUMERIC) ==========")
-        print(self.df.describe())
+        self.logger.info("Lấy thống kê mô tả cho cột số.")
+        self.logger.debug(f"Số cột số: {len(self.df.select_dtypes(include=np.number).columns)}")
+        self.logger.debug(f"Số dòng: {len(self.df)}")
+        self.logger.debug(f"Cột số: {self.df.select_dtypes(include=np.number).columns.tolist()}")
+        self.logger.debug(f"Thống kê mô tả:\n{self.df.describe()}")
+        self.logger.info("Hoàn thành lấy thống kê mô tả cho cột số.")
+        self.logger.debug(f"{self.df.describe()}")
 
         cat_cols = self.df.select_dtypes(include=['object', 'category']).columns
         if len(cat_cols) > 0:
-            print("\n========== DESCRIBE (CATEGORICAL) ==========")
-            print(self.df[cat_cols].describe())
-
+            self.logger.info("Lấy thống kê mô tả cho cột phân loại.")
+            self.logger.debug(f"Số cột phân loại: {len(cat_cols)}")
+            self.logger.debug(f"Cột phân loại: {cat_cols.tolist()}")
+            self.logger.debug(f"Thống kê mô tả:\n{self.df[cat_cols].describe()}")
+            self.logger.info("Hoàn thành lấy thống kê mô tả cho cột phân loại")
+            self.logger.debug(f"{self.df[cat_cols].describe()}")
+        self.logger.info("Hoàn thành lấy thống kê mô tả cho toàn bộ DataFrame.")
+        
 class Visualizer:
     """
     Lớp hỗ trợ trực quan hóa dữ liệu và kết quả phân tích bằng các biểu đồ.
@@ -58,12 +73,16 @@ class Visualizer:
             Tập dữ liệu gốc.
         """
         self.df = df.copy()
+        self.logger = Logger(name="Visualizer").get_logger()
+        self.logger.info(f"Khởi tạo Visualizer với DataFrame gồm {len(self.df)} dòng và {len(self.df.columns)} cột.")
 
         # Convert object -> datetime nếu có thể
+        self.logger.info("Chuẩn hóa cột datetime nếu có thể.")
         for col in self.df.columns:
             if self.df[col].dtype == "object":
                 try:
                     self.df[col] = pd.to_datetime(self.df[col])
+                    self.logger.info(f"Chuyển cột '{col}' từ object sang datetime thành công.")
                 except:
                     pass
 
@@ -87,25 +106,26 @@ class Visualizer:
         - Histogram được chuẩn hóa (density=True).
         """
         if col not in self.df.columns:
-            print(f" Cột '{col}' không tồn tại.")
+            self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return
 
         if not is_numeric_dtype(self.df[col]):
-            print(f" Cột '{col}' không phải số -> bỏ qua Histogram.")
+            self.logger.error(f"Cột '{col}' không phải số, không thể vẽ Histogram.")
             return
 
         data = self.df[col].dropna()
         if data.empty:
-            print(f" Cột '{col}' không có dữ liệu hợp lệ để vẽ.")
+            self.logger.error(f"Cột '{col}' không có dữ liệu hợp lệ để vẽ Histogram.")
             return
 
         unique_vals = data.unique()
 
         if set(unique_vals) <= {0, 1} and len(unique_vals) <= 2:
-            print(f" Cột '{col}' là nhị phân (0/1) -> vẽ Bar chart thay vì Histogram")
+            self.logger.info(f"Cột '{col}' là nhị phân (0/1), chuyển sang vẽ Bar chart.")
             self.plot_bar(col)
             return
 
+        self.logger.info(f"Vẽ Histogram cho cột '{col}'.")
         plt.figure(figsize=(9, 5))
         plt.hist(
             data,
@@ -116,13 +136,13 @@ class Visualizer:
             linewidth=1,
             alpha=0.7
         )
-
         try:
             kde = gaussian_kde(data)
             x_vals = np.linspace(data.min(), data.max(), 300)
             plt.plot(x_vals, kde(x_vals), color="red", linewidth=2.2)
+            self.logger.info(f"Thêm KDE vào Histogram cho cột '{col}'.")
         except:
-            print(" Không load được scipy hoặc lỗi tính toán -> bỏ qua KDE")
+            self.logger.warning(f"Không thể tính KDE cho cột '{col}'.")
 
         plt.title(f"Histogram + KDE – {col}", fontsize=16, fontweight="bold")
         plt.xlabel(col, fontsize=13)
@@ -130,6 +150,7 @@ class Visualizer:
         plt.grid(alpha=0.3)
         plt.tight_layout()
         plt.show()
+        self.logger.info(f"Hoàn thành vẽ Histogram cho cột '{col}'.")
 
 
     # ************************************************
@@ -145,18 +166,19 @@ class Visualizer:
             Tên cột cần vẽ.
         """
         if col not in self.df.columns:
-            print(f" Cột '{col}' không tồn tại.")
+            self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return
 
         if not is_numeric_dtype(self.df[col]):
-            print(f" Cột '{col}' không phải số -> bỏ qua Boxplot.")
+            self.logger.error(f"Cột '{col}' không phải số, không thể vẽ Boxplot.")
             return
 
         data = self.df[col].dropna()
         if data.empty:
-            print(f" Cột '{col}' không có dữ liệu hợp lệ để vẽ.")
+            self.logger.error(f"Cột '{col}' không có dữ liệu hợp lệ để vẽ Boxplot.")
             return
 
+        self.logger.info(f"Vẽ Boxplot cho cột '{col}'.")
         plt.figure(figsize=(12, 3.8))
         plt.boxplot(
             data,
@@ -175,7 +197,7 @@ class Visualizer:
         plt.grid(axis="x", alpha=0.3)
         plt.tight_layout()
         plt.show()
-
+        self.logger.info(f"Hoàn thành vẽ Boxplot cho cột '{col}'.")
 
     # ************************************************
     # 3. Bar chart
@@ -190,14 +212,15 @@ class Visualizer:
             Tên cột cần vẽ.
         """
         if col not in self.df.columns:
-            print(f" Cột '{col}' không tồn tại.")
+            self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return
 
         counts = self.df[col].value_counts().sort_index()
         if counts.empty:
-            print(f" Cột '{col}' không có dữ liệu hợp lệ để vẽ.")
+            self.logger.error(f"Cột '{col}' không có dữ liệu hợp lệ để vẽ Bar chart.")
             return
 
+        self.logger.info(f"Vẽ Bar chart cho cột '{col}'.")
         plt.figure(figsize=(7, 4))
         counts.plot(
             kind="bar",
@@ -210,7 +233,7 @@ class Visualizer:
         plt.xticks(rotation=0 if len(counts) <= 10 else 45, ha='right')
         plt.tight_layout()
         plt.show()
-
+        self.logger.info(f"Hoàn thành vẽ Bar chart cho cột '{col}'.")
 
     # ************************************************
     # 4. Scatter Plot
@@ -227,13 +250,14 @@ class Visualizer:
             Tên cột trục y.
         """
         if x not in self.df.columns or y not in self.df.columns:
-            print(f" Cột '{x}' hoặc '{y}' không tồn tại.")
+            self.logger.error(f"Cột '{x}' hoặc '{y}' không tồn tại trong DataFrame.")
             return
 
         if not (is_numeric_dtype(self.df[x]) and is_numeric_dtype(self.df[y])):
-            print(" Scatter plot yêu cầu cả hai cột phải là số.")
+            self.logger.error(f"Cột '{x}' hoặc '{y}' không phải số, không thể vẽ Scatter plot.")
             return
 
+        self.logger.info(f"Vẽ Scatter plot cho cột '{x}' và '{y}'.")
         plt.figure(figsize=(7, 4))
         plt.scatter(self.df[x], self.df[y], s=10)
         plt.title(f"Scatter Plot – {x} vs {y}")
@@ -242,6 +266,7 @@ class Visualizer:
         plt.grid(alpha=0.3)
         plt.tight_layout()
         plt.show()
+        self.logger.info(f"Hoàn thành vẽ Scatter plot cho cột '{x}' và '{y}'.")
 
     # ************************************************
     # 5. Heatmap tương quan
@@ -257,13 +282,14 @@ class Visualizer:
         numeric_df = self.df.select_dtypes(include=np.number)
 
         if numeric_df.empty:
-            print(" Không có cột số nào để tính tương quan.")
+            self.logger.error("Không có cột số trong DataFrame để vẽ heatmap tương quan.")
             return
 
         if numeric_df.shape[1] > 100:
-            print(" Dataset có quá nhiều cột số -> chỉ vẽ 100 cột đầu để tránh lag.")
+            self.logger.warning("Số cột số vượt quá 100, chỉ sử dụng 100 cột đầu tiên để vẽ heatmap tương quan.")
             numeric_df = numeric_df.iloc[:, :100]
 
+        self.logger.info("Vẽ heatmap ma trận tương quan.")
         corr = numeric_df.corr()
 
         plt.figure(figsize=(12, 10))
@@ -285,7 +311,7 @@ class Visualizer:
 
         plt.tight_layout()
         plt.show()
-
+        self.logger.info("Hoàn thành vẽ heatmap ma trận tương quan.")
 
     # ************************************************
     # 6. Auto plot
@@ -306,21 +332,21 @@ class Visualizer:
             Cột cần vẽ.
         """
         if col not in self.df.columns:
-            print(f" Cột '{col}' không tồn tại.")
+            self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return
 
-        print(f"\n Auto-plot cho cột: {col}")
+        self.logger.info(f"Tự động chọn biểu đồ cho cột '{col}'.")
 
         if is_datetime64_any_dtype(self.df[col]):
-            print(" Dạng datetime -> vẽ Line Chart theo thời gian")
 
             # Đếm số lượng xảy ra cho mỗi ngày
             s = self.df[col].dropna().value_counts().sort_index()
 
             if s.empty:
-                print(" Không có dữ liệu datetime hợp lệ để vẽ.")
+                self.logger.error(f"Cột '{col}' không có dữ liệu datetime hợp lệ để vẽ Line Chart.")
                 return
 
+            self.logger.info(f"Vẽ Line Chart cho cột datetime '{col}'.")
             plt.figure(figsize=(10, 4))
             s.plot()
             plt.title(f"Time Series Count - {col}")
@@ -329,25 +355,23 @@ class Visualizer:
             plt.grid(alpha=0.3)
             plt.tight_layout()
             plt.show()
+            self.logger.info(f"Hoàn thành vẽ Line Chart cho cột datetime '{col}'.")
             return
 
         if is_numeric_dtype(self.df[col]):
             data_clean = self.df[col].dropna()
             if data_clean.empty:
-                print(" Không có dữ liệu số hợp lệ để vẽ.")
+                self.logger.error(f"Cột '{col}' không có dữ liệu số hợp lệ để vẽ.")
                 return
 
             unique_vals = data_clean.unique()
             if set(unique_vals) <= {0, 1} and len(unique_vals) <= 2:
-                print(" Numeric nhị phân 0/1 -> Bar chart")
                 self.plot_bar(col)
             else:
-                print(" Numeric -> Histogram + Boxplot")
                 self.plot_hist(col)
                 self.plot_box(col)
             return
 
-        print(" Dạng phân loại -> Bar chart")
         self.plot_bar(col)
 
     # ************************************************
@@ -363,20 +387,19 @@ class Visualizer:
         - Giới hạn tối đa 200 biểu đồ (đã cập nhật từ 100).
         - Cuối cùng thêm heatmap tương quan.
         """
-        print("\n TẠO BÁO CÁO HÌNH ẢNH TỰ ĐỘNG")
-        print("-" * 50)
+        self.logger.info("Bắt đầu tạo báo cáo hình ảnh tự động cho toàn bộ DataFrame.")
 
         count = 0
         MAX_PLOTS = 200
 
         for col in self.df.columns:
             if count >= MAX_PLOTS:
-                print(f" Dừng tại {MAX_PLOTS} biểu đồ để tránh quá tải.")
                 break
 
-            print(f"\n Cột: {col}")
             self.auto_plot(col)
             count += 1
+        self.logger.info("Hoàn thành tạo báo cáo hình ảnh tự động cho toàn bộ DataFrame.")
 
-        print("\n Thêm Heatmap tương quan…")
+        self.logger.info("Vẽ heatmap tương quan cuối báo cáo.")
         self.plot_correlation()
+        self.logger.info("Hoàn thành vẽ heatmap tương quan cuối báo cáo.")
