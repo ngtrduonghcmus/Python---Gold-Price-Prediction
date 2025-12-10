@@ -39,11 +39,9 @@ project/
 │   ├── datamodule.py
 │   │   ├── DataModule
 │   │   └── TimeSeriesSplitter
-│   ├── trainer.py
-│   │   └── ModelTrainer
-│   ├── optimization.py
-│   │   └── HyperParameterOptimizer
-│   └── evaluation.py
+│   └── trainer.py
+│       ├── ModelTrainer
+│       ├── HyperParameterOptimizer
 │       └── ModelEvaluator
 │
 ├── utils/
