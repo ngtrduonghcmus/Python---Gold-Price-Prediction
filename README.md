@@ -24,12 +24,23 @@ project/
 │   ├── data_loader.py
 │   │   └── DataLoader
 │   ├── eda.py
-│   │   └── StatisticsAnalyzer
+│   │   ├── StatisticsAnalyzer
 │   │   └── Visualizer
 │   ├── preprocessing.py
-│   │   └── DataPreprocessor
+│   │   ├── DataPreprocessor
 │   │   └── Scaler
 ├── training/
-│   ├── 
+│   ├── config_manager.py
+│   │   └── ConfigManager
+│   ├── data_processor.py
+│   │   ├── DataModule
+│   │   └── TSDataSplitter
+│   ├── model_training.py
+│   │   ├── ModelTrainer
+│   │   ├── HyperParameterOptimizer
+│   │   └── ModelEvaluator
+├── logger.py
+│   └── Logger
+├── data.csv
 ```
 ## Hướng dẫn cài đặt
