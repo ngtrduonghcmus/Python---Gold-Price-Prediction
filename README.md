@@ -20,27 +20,44 @@ Trong phạm vi môn học, nhóm xây dựng một quy trình tổng thể bao 
 ## Cấu trúc thư mục
 ```
 project/
+├── data/
+│   └── data.csv
+│
 ├── preprocessing/
-│   ├── data_loader.py
+│   ├── loader.py
 │   │   └── DataLoader
 │   ├── eda.py
 │   │   ├── StatisticsAnalyzer
 │   │   └── Visualizer
-│   ├── preprocessing.py
-│   │   ├── DataPreprocessor
-│   │   └── Scaler
+│   └── preprocessing.py
+│       ├── DataPreprocessor
+│       └── DataScaler
+│
 ├── training/
-│   ├── config_manager.py
+│   ├── config.py
 │   │   └── ConfigManager
-│   ├── data_processor.py
+│   ├── datamodule.py
 │   │   ├── DataModule
-│   │   └── TSDataSplitter
-│   ├── model_training.py
-│   │   ├── ModelTrainer
-│   │   ├── HyperParameterOptimizer
-│   │   └── ModelEvaluator
-├── logger.py
-│   └── Logger
-├── data.csv
+│   │   └── TimeSeriesSplitter
+│   ├── trainer.py
+│   │   └── ModelTrainer
+│   ├── optimization.py
+│   │   └── HyperParameterOptimizer
+│   └── evaluation.py
+│       └── ModelEvaluator
+│
+├── utils/
+│   └── logger.py
+│       └── Logger
+│
+├── configs/
+│   └── experiment.yaml              
+│
+├── runs/
+│   ├── logs/
+│   └── models/
+│
+├── main.py                           
+└── README.md
 ```
 ## Hướng dẫn cài đặt
