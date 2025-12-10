@@ -1,6 +1,7 @@
 import pandas as pd
+from utils.logger import Logger
 
-class DataOverview:
+class DataLoader:
     """
     Lớp hỗ trợ đọc dữ liệu, trích xuất các thông tin cơ bản và xuất dữ liệu.
     Các lớp khác (Preprocessor, Analyzer, Scaler, Visualizer) sẽ dùng self.df của lớp này.
@@ -19,10 +20,13 @@ class DataOverview:
         self.df = None
         self.encoders = {}
         self.scalers = {}
+        self.logger = Logger(name="DataLoader").get_logger()
+
+        self.logger.info(f"Khởi tạo DataLoader(filepath={filepath})")
 
     def __repr__(self):
         """Trả về chuỗi mô tả class gồm đường dẫn file và số dòng của DataFrame."""
-        return f"DataOverview(filepath={self.filepath}, rows={0 if self.df is None else len(self.df)})"
+        return f"DataLoader(filepath={self.filepath}, rows={0 if self.df is None else len(self.df)})"
 
     # ************************************************
     # 1. ĐỌC DỮ LIỆU
@@ -36,8 +40,10 @@ class DataOverview:
         DataFrame
             Dữ liệu đã được đọc thành công.
         """
+
+        self.logger.info(f"Bắt đầu đọc dữ liệu.")
         if self.filepath is None:
-            print(" Lỗi: Đường dẫn file chưa được cung cấp.")
+            self.logger.error("Đường dẫn file chưa được cung cấp.")
             return None
 
         try:
@@ -49,11 +55,13 @@ class DataOverview:
                 self.df = pd.read_json(self.filepath)
             else:
                 raise ValueError("Định dạng file không được hỗ trợ (chỉ chấp nhận .csv, .xlsx, .json).")
+            
+            self.logger.info(f"Đọc dữ liệu thành công — Rows: {len(self.df)}, Cols: {len(self.df.columns)}")
         except FileNotFoundError:
-             print(f" Lỗi: Không tìm thấy file tại đường dẫn: {self.filepath}")
-             self.df = None
+            self.logger.error(f"Không tìm thấy file tại đường dẫn: {self.filepath}")
+            self.df = None
         except Exception as e:
-            print(" Lỗi khi đọc file:", e)
+            self.logger.exception(f"Lỗi khi đọc file: {e}")
             self.df = None
 
         return self.df
@@ -66,16 +74,23 @@ class DataOverview:
         In ra các thông tin cơ bản của DataFrame gồm info(), thống kê cột dạng chuỗi
         và số lượng giá trị thiếu. (describe() được chuyển sang StatisticsAnalyzer)
         """
+        self.logger.info("Bắt đầu lấy thông tin cơ bản của DataFrame")
         if self.df is None:
-            print(" DataFrame trống. Hãy đọc dữ liệu trước.")
+            self.logger.warning("DataFrame trống – cần gọi read_data() trước.")
             return
 
-        print("========== DATAFRAME INFO ==========")
-        self.df.info()
+        self.logger.debug(f"Số dòng: {len(self.df)}, Số cột: {len(self.df.columns)}")
+        self.logger.info(f"Thông tin DataFrame:\n{self.df.info()}")
 
-        print("\n========== NULL COUNT ==========")
         nan_counts = self.df.isna().sum()
-        print(nan_counts[nan_counts > 0])
+        missing = nan_counts[nan_counts > 0]
+
+        if len(missing) > 0:
+            self.logger.warning(f"Giá trị thiếu:\n{missing}")
+        else:
+            self.logger.info("Không có giá trị thiếu trong dữ liệu.")
+
+        self.logger.info("Hoàn thành lấy thông tin cơ bản của DataFrame")
 
     # ************************************************
     # 3. XUẤT DỮ LIỆU
@@ -90,8 +105,11 @@ class DataOverview:
             Đường dẫn file CSV cần lưu.
         """
         if self.df is None:
-            print(" DataFrame trống. Không có gì để xuất.")
+            self.logger.error("DataFrame trống, không thể export.")
             return
 
-        self.df.to_csv(path, index=False)
-        print(" Đã lưu file:", path)
+        try:
+            self.df.to_csv(path, index=False)
+            self.logger.info(f"Đã xuất dữ liệu ra: {path}")
+        except Exception as e:
+            self.logger.exception(f"Lỗi khi export file: {e}")
