@@ -114,7 +114,7 @@ pip install -r requirements.txt
 ```
 
 ### Bước 4: Chạy chương trình
-Trước khi chạy, hãy kiểm tra thư mục data/raw/ xem đã có file data.csv chưa (nếu chưa, vui lòng tải từ Kaggle và đặt vào đó).
+Trước khi chạy, hãy xoá thư mục `result`.
 
 Chạy lệnh sau để bắt đầu huấn luyện và dự đoán:
 ```bash
