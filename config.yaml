@@ -1,0 +1,42 @@
+project:
+  name: Gold_Price_Forecast_Pro
+  seed: 42
+data:
+  raw_path: data_clean.csv
+  target_col: Adj Close
+  target_transform: log_return
+  lags:
+  - 1
+  - 2
+  - 3
+  - 5
+  - 21
+  rolling_windows:
+  - 5
+  - 20
+  selection:
+    enable: true
+    max_features: 30
+splitting:
+  method: rolling_window
+  test_size: 0.15
+  train_window: 1000
+  test_window: 60
+  purge: 0
+training:
+  models:
+  - xgboost
+  - catboost
+  - lightgbm
+  - random_forest
+  metric: rmse
+optimization:
+  n_trials: 50
+  timeout: 1200
+  n_jobs_optuna: 4
+hardware:
+  use_gpu: false
+  n_jobs: -1
+output:
+  model_dir: ./models
+  result_dir: ./results
