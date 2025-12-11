@@ -21,27 +21,35 @@ Trong phạm vi môn học, nhóm xây dựng một quy trình tổng thể bao 
 ```
 project/
 │
+├── data/
+│   ├── raw/
+│   │   └── data.csv
+│   └── processed/
+│       └── data_clean.csv
+│
 ├── preprocessing/
 │   ├── loader.py
 │   │   └── DataLoader
-│   ├── eda.py
-│   │   ├── StatisticsAnalyzer
-│   │   └── Visualizer
-│   └── preprocessing.py
-│       ├── DataPreprocessor
-│       └── DataScaler
+│   ├── analyzer.py
+│   │   └── StatisticsAnalyzer
+│   ├── transformers.py
+│   │   ├── DataPreprocessor
+│   │   └── DataScaler
+│   └── visualization.py
+│       ├── BasicVisualizer
+│       └── DataFrameVisualizer
 │
 ├── training/
 │   ├── config.py
 │   │   └── ConfigManager
 │   ├── datamodule.py
 │   │   ├── DataModule
-│   │   ├── TimeSeriesSplitter
-│   │   └── VisualizationModule
-│   └── trainer.py
-│       ├── ModelTrainer
-│       ├── HyperParameterOptimizer
-│       └── ModelEvaluator
+│   │   └── TimeSeriesSplitter
+│   ├── trainer.py
+│   │   ├── ModelTrainer
+│   │   └── HyperParameterOptimizer
+│   └── modelvisualization.py
+│       └── ModelVisualizer
 │
 ├── utils/
 │   └── logger.py
@@ -64,11 +72,13 @@ project/
 │   │   ├── forecast_catboost.png
 │   │   ├── residuals_catboost.png
 │   │   └── shap_catboost.png
-│   ├── best_hyperparameters.json
-│   └── final_scores.json
+│   ├── metrics/
+│   │   ├── best_hyperparameters.json
+│   │   └── final_scores.json
+│   └── logs/
+│       ├── preprocessing.log
+│       └── training.log   
 │
-├── data.csv
-├── data_clean.csv
 ├── requirements.txt
 ├── config.yaml
 ├── main.py                           
