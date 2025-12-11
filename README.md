@@ -55,14 +55,13 @@ project/
 │   └── logger.py
 │       └── Logger    
 │
-├── models/
-│   ├── catboost_final.joblib
-│   ├── xgboost_final.joblib
-│   ├── lightgbm_final.joblib
-│   ├── random_forest_final.joblib
-│   └── final_scaler.joblib/
-│
 ├── results/
+│   ├── models/
+│   │   ├── catboost_final.joblib
+│   │   ├── xgboost_final.joblib
+│   │   ├── lightgbm_final.joblib
+│   │   ├── random_forest_final.joblib
+│   │   └── final_scaler.joblib/
 │   ├── plots/
 │   │   ├── leaderboard.png
 │   │   ├── forecast_catboost.png
