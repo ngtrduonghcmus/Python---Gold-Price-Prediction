@@ -1,73 +1,52 @@
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
-from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 
-class Logger:
+# ---------------------------------------------------
+# Tạo thư mục logs nếu chưa có
+# ---------------------------------------------------
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+
+def create_file_logger(name, filename, level=logging.INFO):
     """
-    Logger chuẩn cho toàn bộ pipeline.
-
-    - Tự động tạo thư mục logs/
-    - Log vào file + console
-    - Tách file theo ngày
-    - Có file error.log riêng
+    Tạo logger ghi log vào logs/filename
     """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-    def __init__(self, name: str = "project", log_dir: str = "logs"):
-        self.name = name
-        self.log_dir = log_dir
+    # đường dẫn file log đầy đủ
+    filepath = os.path.join(LOG_DIR, filename)
 
-        # Tạo thư mục logs nếu chưa có
-        os.makedirs(self.log_dir, exist_ok=True)
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s] [%(class)s]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
-        # Tên file dạng: training_2025-12-10.log
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        log_file = os.path.join(self.log_dir, f"{self.name}_{date_str}.log")
+    handler = RotatingFileHandler(
+        filepath,
+        maxBytes=5_000_000,
+        backupCount=3,
+        encoding="utf-8"     # cần thiết để ghi tiếng Việt
+    )
+    handler.setFormatter(formatter)
 
-        # Logger chính
-        self.logger = logging.getLogger(self.name)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.propagate = False
+    if not logger.handlers:
+        logger.addHandler(handler)
 
-        # Tránh thêm handler trùng lặp khi import nhiều lần
-        if not self.logger.handlers:
-            self._add_handlers(log_file)
+    return logger
 
-    def _add_handlers(self, log_file):
-        # Format log chuẩn, đọc dễ
-        formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-            "%Y-%m-%d %H:%M:%S"
-        )
+_preprocess_base_logger = create_file_logger("preprocess", "preprocessing.log", level=logging.DEBUG)
+_training_base_logger = create_file_logger("training", "training.log", level=logging.DEBUG)
+preprocess_logger = _preprocess_base_logger
+training_logger = _training_base_logger
 
-        # --- Console Handler ---
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(formatter)
+def get_preprocess_logger(class_name: str):
+    """Trả về logger có đính kèm tên class."""
+    return logging.LoggerAdapter(_preprocess_base_logger, {"class": class_name})
 
-        # --- File Handler (rotating) ---
-        file_handler = TimedRotatingFileHandler(
-            filename=log_file,
-            when="midnight",
-            interval=1,
-            backupCount=7,     # Lưu 7 ngày gần nhất
-            encoding="utf-8"
-        )
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
-
-        # --- Error File Handler ---
-        error_handler = logging.FileHandler(
-            os.path.join(self.log_dir, "error.log")
-        )
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
-
-        # Add vào logger
-        self.logger.addHandler(console_handler)
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(error_handler)
-
-    def get_logger(self):
-        return self.logger
+def get_training_logger(class_name: str):
+    """Trả về logger có đính kèm tên class."""
+    return logging.LoggerAdapter(_training_base_logger, {"class": class_name})
