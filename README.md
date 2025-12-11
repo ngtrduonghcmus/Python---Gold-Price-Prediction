@@ -20,8 +20,6 @@ Trong phạm vi môn học, nhóm xây dựng một quy trình tổng thể bao 
 ## Cấu trúc thư mục
 ```
 project/
-├── data/
-│   └── data.csv
 │
 ├── preprocessing/
 │   ├── loader.py
@@ -38,7 +36,8 @@ project/
 │   │   └── ConfigManager
 │   ├── datamodule.py
 │   │   ├── DataModule
-│   │   └── TimeSeriesSplitter
+│   │   ├── TimeSeriesSplitter
+│   │   └── VisualizationModule
 │   └── trainer.py
 │       ├── ModelTrainer
 │       ├── HyperParameterOptimizer
@@ -48,13 +47,30 @@ project/
 │   └── logger.py
 │       └── Logger
 │
-├── configs/
-│   └── experiment.yaml              
+├── logs/
+│   ├── preprocessing.log
+│   └── training.log          
 │
-├── runs/
-│   ├── logs/
-│   └── models/
+├── models/
+│   ├── catboost_final.joblib
+│   ├── xgboost_final.joblib
+│   ├── lightgbm_final.joblib
+│   ├── random_forest_final.joblib
+│   └── final_scaler.joblib/
 │
+├── results/
+│   ├── plots/
+│   │   ├── leaderboard.png
+│   │   ├── forecast_catboost.png
+│   │   ├── residuals_catboost.png
+│   │   └── shap_catboost.png
+│   ├── best_hyperparameters.json
+│   └── final_scores.json
+│
+├── data.csv
+├── data_clean.csv
+├── requirements.txt
+├── config.yaml
 ├── main.py                           
 └── README.md
 ```
