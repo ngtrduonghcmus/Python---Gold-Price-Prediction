@@ -48,7 +48,7 @@ project/
 │   ├── trainer.py
 │   │   ├── ModelTrainer
 │   │   └── HyperParameterOptimizer
-│   └── report.py
+│   └── model_summary.py
 │       └── ModelVisualizer
 │
 ├── utils/
