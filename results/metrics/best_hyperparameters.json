@@ -1,0 +1,42 @@
+{
+    "xgboost": {
+        "random_state": 42,
+        "n_estimators": 127,
+        "learning_rate": 0.015071970443465038,
+        "max_depth": 5,
+        "n_jobs": -1,
+        "tree_method": "hist",
+        "verbosity": 0,
+        "subsample": 0.7021642869390147,
+        "colsample_bytree": 0.8693526103916195
+    },
+    "catboost": {
+        "random_state": 42,
+        "iterations": 209,
+        "learning_rate": 0.18297678773091544,
+        "depth": 4,
+        "thread_count": -1,
+        "allow_writing_files": false,
+        "verbose": 0,
+        "task_type": "CPU",
+        "l2_leaf_reg": 1.0333733803419385
+    },
+    "lightgbm": {
+        "random_state": 42,
+        "n_estimators": 122,
+        "learning_rate": 0.014514945161916497,
+        "n_jobs": -1,
+        "verbose": -1,
+        "force_col_wise": true,
+        "num_leaves": 26,
+        "max_depth": 5,
+        "min_child_samples": 37
+    },
+    "random_forest": {
+        "random_state": 42,
+        "n_estimators": 100,
+        "max_depth": 9,
+        "n_jobs": -1,
+        "min_samples_split": 9
+    }
+}
