@@ -1,0 +1,114 @@
+[2025-12-11 21:34:08] [INFO] [training] [Main]: === HUẤN LUYỆN MÔ HÌNH ===
+[2025-12-11 21:34:08] [INFO] [training] [ConfigManager]: >>> KHỞI TẠO CONFIG MANAGER <<<
+[2025-12-11 21:34:08] [WARNING] [training] [ConfigManager]: Config 'config.yaml' chưa tồn tại. Đang tạo cấu hình tối ưu mặc định...
+[2025-12-11 21:34:08] [INFO] [training] [ConfigManager]: Đã lưu cấu hình vào 'config.yaml'
+[2025-12-11 21:34:08] [INFO] [training] [ConfigManager]: Đã ghi đè cấu hình từ dòng lệnh nếu có.
+[2025-12-11 21:34:08] [INFO] [training] [Main]: >>> THIẾT LẬP <<<
+[2025-12-11 21:34:08] [DEBUG] [training] [Main]: 
+[CHECK] Target Mode:    LOG_RETURN
+[2025-12-11 21:34:08] [DEBUG] [training] [Main]: [CHECK] Active Models:  ['xgboost', 'catboost', 'lightgbm', 'random_forest']
+[2025-12-11 21:34:08] [DEBUG] [training] [Main]: [CHECK] Tuning Trials:  50
+[2025-12-11 21:34:08] [INFO] [training] [ConfigManager]: Đã lưu cấu hình vào 'config.yaml'
+[2025-12-11 21:34:08] [INFO] [training] [Main]: 'config.yaml'
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: >>> KHỞI TẠO DATA MODULE <<<
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: --- THỰC HIỆN DATA PIPELINE ---
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: *** ĐỌC DỮ LIỆU ***
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: *** TẠO ĐẶC TRƯNG ***
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: *** CHUẨN BỊ X, y ***
+[2025-12-11 21:34:08] [INFO] [training] [DataModule]: *** LỰA CHỌN ĐẶC TRƯNG ***
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: Hoàn thành. X: (1695, 30), y: (1695,)
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: --- THỰC HIỆN DATA PIPELINE ---
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: *** ĐỌC DỮ LIỆU ***
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: *** TẠO ĐẶC TRƯNG ***
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: *** CHUẨN BỊ X, y ***
+[2025-12-11 21:34:09] [INFO] [training] [DataModule]: *** LỰA CHỌN ĐẶC TRƯNG ***
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: Hoàn thành. X: (1695, 30), y: (1695,)
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: 
+Kiểm tra dữ liệu đầu ra:
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: 1. Kích thước X: (1695, 30)
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: 2. Kích thước y: (1695,)
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: 3. Dải giá trị y (Return): Min=-0.0919, Max=0.0720
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: 4. Raw Price cuối cùng: 121.25
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]:             USO_Open  GDX_Volume     SP_open  PLT_Price  ...  PLT_Trend    SP_volume  EG_volume  EU_Trend
+Date                                                     ...                                             
+2018-12-26      9.25  76365200.0  235.970001     799.25  ...        1.0  218485408.0   746300.0       0.0
+2018-12-27      9.59  52393000.0  242.570007     795.50  ...        0.0  186267296.0   744000.0       1.0
+2018-12-28      9.54  49835000.0  249.580002     790.25  ...        0.0  153100192.0  1061100.0       1.0
+
+[3 rows x 30 columns]
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: Features: 30 columns
+[2025-12-11 21:34:10] [DEBUG] [training] [Main]: Total Samples: 1695
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: --- THỰC HIỆN DATA PIPELINE ---
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: *** ĐỌC DỮ LIỆU ***
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: *** TẠO ĐẶC TRƯNG ***
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: *** CHUẨN BỊ X, y ***
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: *** LỰA CHỌN ĐẶC TRƯNG ***
+[2025-12-11 21:34:10] [INFO] [training] [DataModule]: Hoàn thành. X: (1695, 30), y: (1695,)
+[2025-12-11 21:34:10] [INFO] [training] [TimeSeriesSplitter]: >>> KHỞI TẠO TIME SERIES SPLITTER <<<
+[2025-12-11 21:34:10] [INFO] [training] [Main]: Đang vẽ sơ đồ chia dữ liệu...
+[2025-12-11 21:34:10] [INFO] [training] [TimeSeriesSplitter]: *** TẠO CÁC FOLD CHIA DỮ LIỆU ***
+[2025-12-11 21:34:10] [INFO] [training] [TimeSeriesSplitter]: Đã tạo 11 folds (Train Window: 1000, Test Window: 60, Purge: 0)
+[2025-12-11 21:34:10] [INFO] [training] [Data Module]: Vẽ sơ đồ chia dữ liệu Train/Test/Purge...
+[2025-12-11 21:34:12] [INFO] [training] [Data Module]: Đã hoàn thành vẽ sơ đồ chia dữ liệu.
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: *** TẠO CÁC FOLD CHIA DỮ LIỆU ***
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: Đã tạo 11 folds (Train Window: 1000, Test Window: 60, Purge: 0)
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: *** KẾT QUẢ CHIA DỮ LIỆU (CV Fold) ***
+[2025-12-11 21:34:12] [DEBUG] [training] [TimeSeriesSplitter]: Train Period: 2014-08-04 -> 2018-08-09 (1000 mẫu)
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: Test Period : 2018-08-10 -> 2018-11-06 (60 mẫu)
+[2025-12-11 21:34:12] [DEBUG] [training] [Main]: 
+Check shape final split:
+[2025-12-11 21:34:12] [DEBUG] [training] [Main]: X_train: (1000, 30), y_train: (1000,)
+[2025-12-11 21:34:12] [DEBUG] [training] [Main]: X_test:  (60, 30),  y_test:  (60,)
+[2025-12-11 21:34:12] [INFO] [training] [Main]: === HYPERPARAMETER TUNING ===
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: *** TẠO CÁC FOLD CHIA DỮ LIỆU ***
+[2025-12-11 21:34:12] [INFO] [training] [TimeSeriesSplitter]: Đã tạo 11 folds (Train Window: 1000, Test Window: 60, Purge: 0)
+[2025-12-11 21:34:12] [INFO] [training] [HyperParameterOptimizer]: >>> KHỞI TẠO HYPERPARAMETER OPTIMIZER <<<
+[2025-12-11 21:34:12] [INFO] [training] [HyperParameterOptimizer]: *** TỐI ƯU SIÊU THAM SỐ CHO CÁC MÔ HÌNH ***
+[2025-12-11 21:34:12] [INFO] [training] [HyperParameterOptimizer]: Bắt đầu tối ưu tham số cho xgboost...
+[2025-12-11 21:36:03] [DEBUG] [training] [HyperParameterOptimizer]: Best xgboost: RMSE=0.00599
+[2025-12-11 21:36:03] [INFO] [training] [HyperParameterOptimizer]: Bắt đầu tối ưu tham số cho catboost...
+[2025-12-11 21:37:23] [DEBUG] [training] [HyperParameterOptimizer]: Best catboost: RMSE=0.00585
+[2025-12-11 21:37:23] [INFO] [training] [HyperParameterOptimizer]: Bắt đầu tối ưu tham số cho lightgbm...
+[2025-12-11 21:37:58] [DEBUG] [training] [HyperParameterOptimizer]: Best lightgbm: RMSE=0.00604
+[2025-12-11 21:37:58] [INFO] [training] [HyperParameterOptimizer]: Bắt đầu tối ưu tham số cho random_forest...
+[2025-12-11 21:41:06] [DEBUG] [training] [HyperParameterOptimizer]: Best random_forest: RMSE=0.00601
+[2025-12-11 21:41:06] [INFO] [training] [HyperParameterOptimizer]: Đã lưu tham số tối ưu vào: results\metrics\best_hyperparameters.json.
+[2025-12-11 21:41:06] [INFO] [training] [Main]: 
+Tham số tối ưu đã được lưu file JSON.
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: Đã nạp tham số tối ưu từ JSON.
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: >>> KHỞI TẠO MODEL TRAINER <<<
+[2025-12-11 21:41:06] [INFO] [training] [TimeSeriesSplitter]: *** TẠO CÁC FOLD CHIA DỮ LIỆU ***
+[2025-12-11 21:41:06] [INFO] [training] [TimeSeriesSplitter]: Đã tạo 11 folds (Train Window: 1000, Test Window: 60, Purge: 0)
+[2025-12-11 21:41:06] [INFO] [training] [TimeSeriesSplitter]: *** KẾT QUẢ CHIA DỮ LIỆU (CV Fold) ***
+[2025-12-11 21:41:06] [DEBUG] [training] [TimeSeriesSplitter]: Train Period: 2014-08-04 -> 2018-08-09 (1000 mẫu)
+[2025-12-11 21:41:06] [INFO] [training] [TimeSeriesSplitter]: Test Period : 2018-08-10 -> 2018-11-06 (60 mẫu)
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: *** BẮT ĐẦU TRAINING MÔ HÌNH CUỐI CÙNG ***
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: Đang huấn luyện xgboost...
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: *** TẠO MÔ HÌNH CUỐI CÙNG: xgboost ***
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: XGBOOST: Price R2=0.7390 | RMSE=$0.79
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: Đang huấn luyện catboost...
+[2025-12-11 21:41:06] [INFO] [training] [ModelTrainer]: *** TẠO MÔ HÌNH CUỐI CÙNG: catboost ***
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: CATBOOST: Price R2=0.7482 | RMSE=$0.77
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: Đang huấn luyện lightgbm...
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: *** TẠO MÔ HÌNH CUỐI CÙNG: lightgbm ***
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: LIGHTGBM: Price R2=0.7393 | RMSE=$0.79
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: Đang huấn luyện random_forest...
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: *** TẠO MÔ HÌNH CUỐI CÙNG: random_forest ***
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: RANDOM_FOREST: Price R2=0.7318 | RMSE=$0.80
+[2025-12-11 21:41:07] [INFO] [training] [ModelTrainer]: Kết quả lưu tại: results\metrics\final_scores.json
+[2025-12-11 21:41:07] [INFO] [training] [ModelVisualizer]: >>> KHỞI TẠO MODEL EVALUATOR <<<
+[2025-12-11 21:41:14] [INFO] [training] [ModelVisualizer]: Đã lưu biểu đồ: leaderboard.png
+[2025-12-11 21:41:14] [INFO] [training] [Main]: 
+============================================================
+[2025-12-11 21:41:14] [INFO] [training] [Main]: BÁO CÁO TỔNG HỢP HIỆU SUẤT MÔ HÌNH
+[2025-12-11 21:41:14] [INFO] [training] [Main]: ============================================================
+[2025-12-11 21:41:14] [INFO] [training] [Main]:                  RMSE      R2  Dir_Accuracy
+catboost       0.7715  0.7482        0.5500
+lightgbm       0.7851  0.7393        0.5000
+xgboost        0.7855  0.7390        0.5833
+random_forest  0.7964  0.7318        0.5167
+[2025-12-11 21:41:14] [INFO] [training] [Main]: MODEL ĐƯỢC CHỌN: CATBOOST
+[2025-12-11 21:41:17] [INFO] [training] [ModelVisualizer]: Đã lưu biểu đồ: forecast_catboost.png
+[2025-12-11 21:41:19] [INFO] [training] [ModelVisualizer]: Đã lưu biểu đồ: residuals_catboost.png
+[2025-12-11 21:41:19] [INFO] [training] [ModelVisualizer]: Đang tính SHAP cho catboost...
+[2025-12-11 21:41:21] [INFO] [training] [ModelVisualizer]: Đã lưu biểu đồ: shap_catboost.png
