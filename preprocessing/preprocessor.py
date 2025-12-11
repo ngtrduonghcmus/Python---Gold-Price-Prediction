@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, M
 from sklearn.ensemble import IsolationForest
 from scipy.stats import zscore
 from pandas.api.types import is_numeric_dtype
-from utils.logger import Logger
+from utils.logger import get_preprocess_logger
 
 class DataPreprocessor:
     """
@@ -25,9 +25,9 @@ class DataPreprocessor:
         """
         self.df = df
         self.encoders = encoders
-        self.logger = Logger(name="DataPreprocessor").get_logger()
+        self.logger = get_preprocess_logger(self.__class__.__name__)
 
-        self.logger.info(f"Khởi tạo DataPreprocessor) với DataFrame gồm {len(self.df)} dòng và {len(self.df.columns)} cột.")
+        self.logger.info(">>> KHỞI TẠO DATA PREPROCESSOR <<<")
 
     # ************************************************
     # 1. FILL DATE NA (Phương pháp nội suy ngày tháng)
@@ -37,14 +37,13 @@ class DataPreprocessor:
         Xử lý cột ngày tháng: Chuyển đổi, nội suy, loại bỏ trùng lặp và sắp xếp.
         Đảm bảo mỗi ngày là duy nhất và xếp theo thứ tự tăng dần.
         """
+        self.logger.info(f"*** XỬ LÝ CỘT NGÀY THÁNG '{column_name}' ***")
         # 1. Chuyển đổi sang kiểu datetime, ép buộc lỗi thành NaT
         self.df[column_name] = pd.to_datetime(
             self.df[column_name],
             errors='coerce',
             format='%m/%d/%Y'
         )
-
-        self.logger.info(f"Bắt đầu nội suy các giá trị bị thiếu trong cột '{column_name}'.")
 
         # 2. Xử lý nội suy (giữ nguyên logic của bạn)
         date_ordinal = self.df[column_name].apply(
@@ -58,7 +57,7 @@ class DataPreprocessor:
         )
         self.df[column_name] = pd.to_datetime(self.df[column_name])
 
-        self.logger.info(f"Đã nội suy cột '{column_name}'.")
+        self.logger.debug(f"Đã nội suy cột '{column_name}'.")
 
         # 3. LOẠI BỎ CÁC NGÀY TRÙNG LẶP (BƯỚC BỔ SUNG ĐỂ ĐẢM BẢO TÍNH DUY NHẤT)
         initial_rows = len(self.df)
@@ -66,14 +65,14 @@ class DataPreprocessor:
         dropped_rows = initial_rows - len(self.df)
 
         if dropped_rows > 0:
-            self.logger.info(f"Đã loại bỏ {dropped_rows} hàng trùng lặp theo cột '{column_name}'.")
+            self.logger.debug(f"Đã loại bỏ {dropped_rows} hàng trùng lặp theo cột '{column_name}'.")
 
         # 4. Sắp xếp lại và đặt lại chỉ mục (như ban đầu)
         self.df.sort_values(by=column_name, inplace=True)
         self.df.reset_index(drop=True, inplace=True)
 
-        self.logger.info(f"Hoàn thành xử lý cột ngày tháng '{column_name}'.")
-        self.logger.info(f"Cột '{column_name}' đã được chuyển đổi sang kiểu: {self.df[column_name].dtype}")
+        self.logger.debug(f"Hoàn thành xử lý cột ngày tháng '{column_name}'.")
+        self.logger.debug(f"Cột '{column_name}' đã được chuyển đổi sang kiểu: {self.df[column_name].dtype}")
 
         return self.df
     # ************************************************
@@ -94,6 +93,7 @@ class DataPreprocessor:
         DataFrame
             DataFrame sau khi chuẩn hóa cột ngày.
         """
+        self.logger.info(f"*** CHUẨN HÓA CỘT NGÀY '{col}' ***")
         def _normalize(x):
             if pd.isna(x):
                 return pd.NaT
@@ -128,7 +128,7 @@ class DataPreprocessor:
             return pd.NaT
 
         self.df[col] = self.df[col].apply(_normalize)
-        self.logger.info(f"Đã chuẩn hóa cột ngày '{col}' sang định dạng chuẩn.")
+        self.logger.debug(f"Đã chuẩn hóa cột ngày '{col}' sang định dạng chuẩn.")
         return self.df
 
     # ************************************************
@@ -148,13 +148,13 @@ class DataPreprocessor:
         DataFrame
             Dữ liệu sau khi loại bỏ cột/hàng chất lượng thấp.
         """
-        self.logger.info(f"Bắt đầu xoá cột/hàng có tỷ lệ giá trị hợp lệ dưới {threshold_ratio:.2%}.")
+        self.logger.info(f"*** XOÁ CỘT / HÀNG CHẤT LƯỢNG THẤP (Ngưỡng: {threshold_ratio:.2%}) ***")
         total_rows = len(self.df)
         threshold = total_rows * threshold_ratio
 
         cols_to_drop = [col for col in self.df.columns if self.df[col].notna().sum() < threshold]
         if cols_to_drop:
-            self.logger.info(f"Xoá {len(cols_to_drop)} cột có tỷ lệ giá trị hợp lệ dưới {threshold_ratio:.2%}.")
+            self.logger.debug(f"Xoá {len(cols_to_drop)} cột có tỷ lệ giá trị hợp lệ dưới {threshold_ratio:.2%}.")
             self.df.drop(columns=cols_to_drop, inplace=True)
 
         total_cols = self.df.shape[1]
@@ -162,10 +162,9 @@ class DataPreprocessor:
         rows_to_drop = self.df.index[self.df.notna().sum(axis=1) < row_threshold]
 
         if len(rows_to_drop) > 0:
-            self.logger.info(f"Xoá {len(rows_to_drop)} hàng có tỷ lệ giá trị hợp lệ dưới {threshold_ratio:.2%}.")
+            self.logger.debug(f"Xoá {len(rows_to_drop)} hàng có tỷ lệ giá trị hợp lệ dưới {threshold_ratio:.2%}.")
             self.df.drop(index=rows_to_drop, inplace=True)
 
-        self.logger.info("Hoàn thành xoá cột/hàng chất lượng thấp.")
         return self.df
 
     # ************************************************
@@ -180,9 +179,10 @@ class DataPreprocessor:
         DataFrame
             Dữ liệu sau khi xoá trùng lặp và reset index.
         """
+        self.logger.info(f"*** XOÁ HÀNG TRÙNG LẶP ***")
         duplicate_rows = self.df[self.df.duplicated(keep=False)]
         self.df = self.df.drop_duplicates().reset_index(drop=True)
-        self.logger.info(f"Đã xoá {len(duplicate_rows)} hàng trùng lặp.")
+        self.logger.debug(f"Đã xoá {len(duplicate_rows)} hàng trùng lặp.")
         return self.df
 
     # ************************************************
@@ -208,7 +208,7 @@ class DataPreprocessor:
         DataFrame
             Dữ liệu sau khi điền giá trị thiếu.
         """
-        self.logger.info(f"Bắt đầu điền giá trị thiếu bằng phương pháp '{strategy}'.")
+        self.logger.info(f"*** ĐIỀN GIÁ TRỊ THIẾU BẰNG PHƯƠNG PHÁP '{strategy}' ***")
         for col in self.df.columns:
             if self.df[col].isnull().sum() == 0:
                 continue
@@ -233,10 +233,9 @@ class DataPreprocessor:
                             limit=neighbors,
                             limit_direction='both'
                         )
-                self.logger.info(f"Đã điền giá trị thiếu cho cột '{col}' bằng phương pháp '{strategy}'.")
+                self.logger.debug(f"Đã điền giá trị thiếu cho cột '{col}' bằng phương pháp '{strategy}'.")
             except:
                 self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
-        self.logger.info("Hoàn thành điền giá trị thiếu cho toàn bộ DataFrame.")
         return self.df
 
     # ************************************************
@@ -253,8 +252,7 @@ class DataPreprocessor:
         Trả về:
             pd.DataFrame: DataFrame sau khi làm sạch định dạng số.
         """
-
-        self.logger.info("Bắt đầu làm sạch định dạng số cho các cột kiểu 'object'.")
+        self.logger.info(f"*** LÀM SẠCH ĐỊNH DẠNG SỐ (Thay dấu ',' bằng '.') ***")
         df_cleaned = self.df
         object_cols = df_cleaned.select_dtypes(include=['object']).columns.tolist()
 
@@ -271,7 +269,7 @@ class DataPreprocessor:
 
                 # Chỉ thay thế và chuyển đổi nếu cột có chứa dấu phẩy
                 if col_as_str.str.contains(',', regex=False).any():
-                    self.logger.info(f"Làm sạch định dạng số cho cột '{col}' bằng cách thay dấu phẩy bằng dấu chấm.")
+                    self.logger.debug(f"Làm sạch định dạng số cho cột '{col}' bằng cách thay dấu phẩy bằng dấu chấm.")
                     # Thay thế dấu phẩy bằng dấu chấm và chuyển về float
                     df_cleaned[col] = (col_as_str
                                         .str.replace(',', '.', regex=False)
@@ -288,7 +286,7 @@ class DataPreprocessor:
                 self.logger.error(f"Lỗi không thể chuyển đổi cột '{col}' sang float: {e}")
 
         if cleaned_cols:
-            self.logger.info(f"Đã chuyển đổi định dạng số/chuỗi số cho các cột: {', '.join(cleaned_cols)}")
+            pass
         else:
             self.logger.info("Không tìm thấy cột kiểu 'object' nào cần làm sạch định dạng số (ngoài cột ngày).")
 
@@ -325,7 +323,7 @@ class DataPreprocessor:
         DataFrame
             Dữ liệu sau khi xử lý ngoại lai.
         """
-        self.logger.info(f"Bắt đầu xử lý ngoại lai bằng phương pháp '{method}'.")
+        self.logger.info(f"*** XỬ LÝ NGOẠI LAI BẰNG PHƯƠNG PHÁP '{method}' ***")
         numeric_cols = self.df.select_dtypes(include=np.number).columns
 
         for col in numeric_cols:
@@ -348,16 +346,16 @@ class DataPreprocessor:
                     preds = iso.fit_predict(data_clean)
                     mask[data_clean.index[preds == -1]] = True
             else:
+                self.logger.error("Phương pháp xử lý ngoại lai không hợp lệ!")
                 raise ValueError("Phương pháp xử lý ngoại lai không hợp lệ!")
 
             self.df.loc[mask, col] = np.nan # Thay ngoại lai bằng NaN
 
-        self.logger.info(f"Đã thay thế ngoại lai bằng NaN ({method}).")
+        self.logger.debug(f"Đã thay thế ngoại lai bằng NaN ({method}).")
 
         # Sau khi thay bằng NaN, điền lại bằng median
         self.fill_missing("median")
-        self.logger.info("Đã điền lại giá trị ngoại lai bằng median.")
-        self.logger.info("Hoàn thành xử lý ngoại lai cho toàn bộ DataFrame.")
+        self.logger.debug("Đã điền lại giá trị ngoại lai bằng median.")
         return self.df
 
     # ************************************************
@@ -391,7 +389,6 @@ class DataPreprocessor:
             if pd.api.types.is_datetime64_any_dtype(self.df[column]):
                 return self.df
 
-        self.logger.info(f"Bắt đầu chuyển kiểu cột '{column}' sang '{dtype}'.")
         try:
             if callable(dtype):
                 self.df[column] = self.df[column].apply(dtype)
@@ -408,9 +405,9 @@ class DataPreprocessor:
             elif dtype == "category":
                 self.df[column] = self.df[column].astype("category")
 
-            self.logger.info(f"Chuyển kiểu cột '{column}' sang '{dtype}' thành công.")
+            self.logger.debug(f"Chuyển kiểu cột '{column}' sang '{dtype}' thành công.")
         except Exception as e:
-            self.logger.exception(f"Lỗi khi chuyển kiểu cột '{column}': {e}")
+            self.logger.error(f"Lỗi khi chuyển kiểu cột '{column}': {e}")
             if errors == "raise":
                 raise e
 
@@ -493,7 +490,7 @@ class DataPreprocessor:
         DataFrame
             Dữ liệu sau chuyển đổi tự động.
         """
-        self.logger.info("Bắt đầu tự động chuyển kiểu dữ liệu cho toàn bộ DataFrame.")
+        self.logger.info("*** TỰ ĐỘNG CHUYỂN KIỂU DỮ LIỆU TOÀN BỘ DATAFRAME ***")
         changed = []
 
         for col in self.df.columns:
@@ -514,13 +511,12 @@ class DataPreprocessor:
                 current_logic = "str"
 
             if current_logic != best:
-                self.logger.info(f"Cột '{col}': {current_logic} -> {best}")
+                self.logger.debug(f"Cột '{col}': {current_logic} -> {best}")
                 self.convert_dtype(col, best, errors="coerce")
                 changed.append((col, current_logic, best))
             else:
                 pass
 
-        self.logger.info("Hoàn thành tự động chuyển kiểu dữ liệu cho toàn bộ DataFrame.")
         if changed:
             self.logger.info("Các cột đã chuyển kiểu:")
             for c, old, new in changed:
@@ -541,7 +537,6 @@ class DataPreprocessor:
         -------
         DataFrame
         """
-        self.logger.info(f"Bắt đầu mã hóa cột '{col}' bằng Label Encoding.")
         if col not in self.df.columns:
             self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return self.df
@@ -551,7 +546,7 @@ class DataPreprocessor:
         data_clean = self.df[col].astype(str).dropna()
         self.df[col].loc[data_clean.index] = le.fit_transform(data_clean)
         self.encoders[col] = le
-        self.logger.info(f"Đã mã hóa cột '{col}' và lưu LabelEncoder.")
+        self.logger.debug(f"Đã mã hóa cột '{col}' và lưu LabelEncoder.")
         return self.df
 
     def onehot_encode(self, col):
@@ -562,7 +557,6 @@ class DataPreprocessor:
         -------
         DataFrame
         """
-        self.logger.info(f"Bắt đầu mã hóa cột '{col}' bằng One-Hot Encoding.")
         if col not in self.df.columns:
             self.logger.error(f"Cột '{col}' không tồn tại trong DataFrame.")
             return self.df
@@ -580,7 +574,7 @@ class DataPreprocessor:
 
         # Nối lại
         self.df = pd.concat([self.df.drop(columns=[col]), ohe_df], axis=1)
-        self.logger.info(f"Đã mã hóa cột '{col}' và tạo các cột: {', '.join(new_cols)}.")
+        self.logger.debug(f"Đã mã hóa cột '{col}' và tạo các cột: {', '.join(new_cols)}.")
         return self.df
 
     @staticmethod
@@ -618,8 +612,8 @@ class DataScaler:
         """
         self.df = df
         self.scalers = scalers
-        self.logger = Logger(name="DataScaler").get_logger()
-        self.logger.info(f"Khởi tạo DataScaler với DataFrame gồm {len(self.df)} dòng và {len(self.df.columns)} cột.")
+        self.logger = get_preprocess_logger(self.__class__.__name__)
+        self.logger.info(">>> KHỞI TẠO DATA SCALER <<<")
 
     # ************************************************
     # 1. CHUẨN HÓA DỮ LIỆU
@@ -640,6 +634,7 @@ class DataScaler:
         DataFrame
             Dữ liệu đã chuẩn hóa.
         """
+        self.logger.info(f"*** CHUẨN HÓA DỮ LIỆU BẰNG PHƯƠNG PHÁP '{method}' ***")
         if columns is None:
             numeric_cols = self.df.select_dtypes(include=np.number).columns
         else:
@@ -648,8 +643,6 @@ class DataScaler:
         if numeric_cols.empty:
             self.logger.info("Không có cột số nào để chuẩn hóa.")
             return self.df
-
-        self.logger.info(f"Bắt đầu chuẩn hóa dữ liệu bằng phương pháp '{method}' cho các cột: {list(numeric_cols)}.")
 
         if method == "standard":
             scaler = StandardScaler()
@@ -668,6 +661,6 @@ class DataScaler:
                 else:
                     self.df[col] = (self.df[col] - min_val) / (max_val - min_val)
         else:
+            self.logger.error("Phương pháp chuẩn hóa không hợp lệ!")
             raise ValueError("Phương pháp chuẩn hóa không hợp lệ! (standard, minmax, custom)")
-        self.logger.info("Hoàn thành chuẩn hóa dữ liệu.")
         return self.df
