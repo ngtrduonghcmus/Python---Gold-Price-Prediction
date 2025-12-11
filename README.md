@@ -53,11 +53,7 @@ project/
 │
 ├── utils/
 │   └── logger.py
-│       └── Logger
-│
-├── logs/
-│   ├── preprocessing.log
-│   └── training.log          
+│       └── Logger    
 │
 ├── models/
 │   ├── catboost_final.joblib
