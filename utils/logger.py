@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 # ---------------------------------------------------
 # Tạo thư mục logs nếu chưa có
 # ---------------------------------------------------
-LOG_DIR = "logs"
+LOG_DIR = "results/logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 
