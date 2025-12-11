@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.logger import Logger
+from utils.logger import get_preprocess_logger
 
 class DataLoader:
     """
@@ -20,9 +20,8 @@ class DataLoader:
         self.df = None
         self.encoders = {}
         self.scalers = {}
-        self.logger = Logger(name="DataLoader").get_logger()
-
-        self.logger.info(f"Khởi tạo DataLoader(filepath={filepath})")
+        self.logger = get_preprocess_logger(self.__class__.__name__)
+        self.logger.info(">>> KHỞI TẠO DATA LOADER <<<")
 
     def __repr__(self):
         """Trả về chuỗi mô tả class gồm đường dẫn file và số dòng của DataFrame."""
@@ -41,7 +40,7 @@ class DataLoader:
             Dữ liệu đã được đọc thành công.
         """
 
-        self.logger.info(f"Bắt đầu đọc dữ liệu.")
+        self.logger.info(f"*** ĐỌC DỮ LIỆU ***")
         if self.filepath is None:
             self.logger.error("Đường dẫn file chưa được cung cấp.")
             return None
@@ -54,6 +53,7 @@ class DataLoader:
             elif self.filepath.endswith(".json"):
                 self.df = pd.read_json(self.filepath)
             else:
+                self.logger.error("Định dạng file không được hỗ trợ (chỉ chấp nhận .csv, .xlsx, .json).")
                 raise ValueError("Định dạng file không được hỗ trợ (chỉ chấp nhận .csv, .xlsx, .json).")
             
             self.logger.info(f"Đọc dữ liệu thành công — Rows: {len(self.df)}, Cols: {len(self.df.columns)}")
@@ -74,13 +74,13 @@ class DataLoader:
         In ra các thông tin cơ bản của DataFrame gồm info(), thống kê cột dạng chuỗi
         và số lượng giá trị thiếu. (describe() được chuyển sang StatisticsAnalyzer)
         """
-        self.logger.info("Bắt đầu lấy thông tin cơ bản của DataFrame")
+        self.logger.info("*** THÔNG TIN CƠ BẢN CỦA DATAFRAME ***")
         if self.df is None:
             self.logger.warning("DataFrame trống – cần gọi read_data() trước.")
             return
 
         self.logger.debug(f"Số dòng: {len(self.df)}, Số cột: {len(self.df.columns)}")
-        self.logger.info(f"Thông tin DataFrame:\n{self.df.info()}")
+        self.logger.debug(f"Thông tin DataFrame:\n{self.df.info()}")
 
         nan_counts = self.df.isna().sum()
         missing = nan_counts[nan_counts > 0]
@@ -88,9 +88,7 @@ class DataLoader:
         if len(missing) > 0:
             self.logger.warning(f"Giá trị thiếu:\n{missing}")
         else:
-            self.logger.info("Không có giá trị thiếu trong dữ liệu.")
-
-        self.logger.info("Hoàn thành lấy thông tin cơ bản của DataFrame")
+            self.logger.debug("Không có giá trị thiếu trong dữ liệu.")
 
     # ************************************************
     # 3. XUẤT DỮ LIỆU
@@ -104,6 +102,7 @@ class DataLoader:
         path : str
             Đường dẫn file CSV cần lưu.
         """
+        self.logger.info("*** XUẤT DỮ LIỆU RA FILE CSV ***")
         if self.df is None:
             self.logger.error("DataFrame trống, không thể export.")
             return
@@ -112,4 +111,4 @@ class DataLoader:
             self.df.to_csv(path, index=False)
             self.logger.info(f"Đã xuất dữ liệu ra: {path}")
         except Exception as e:
-            self.logger.exception(f"Lỗi khi export file: {e}")
+            self.logger.error(f"Lỗi khi export file: {e}")
