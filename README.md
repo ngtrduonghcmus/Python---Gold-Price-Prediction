@@ -80,3 +80,43 @@ project/
 └── README.md
 ```
 ## Hướng dẫn cài đặt
+
+Vì đây là gói mã nguồn được nén (file .zip), vui lòng làm theo các bước sau để thiết lập môi trường chạy.
+
+### Bước 1: Giải nén và mở Terminal
+1.  Giải nén file `.zip` vào một thư mục trên máy tính.
+2.  Mở **Terminal** (macOS/Linux) hoặc **Command Prompt / PowerShell** (Windows).
+3.  Di chuyển đường dẫn vào thư mục vừa giải nén:
+    ```bash
+    cd Duong/Dan/Toi/Thu/Muc/Gold-Price-Prediction
+    ```
+
+### Bước 2: Tạo môi trường ảo (Virtual Environment)
+Khuyên dùng môi trường ảo để tránh xung đột thư viện.
+
+* **Đối với Windows:**
+    ```bash
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
+
+* **Đối với macOS / Linux:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+### Bước 3: Cài đặt thư viện
+Cài đặt các gói cần thiết được liệt kê trong `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Bước 4: Chạy chương trình
+Trước khi chạy, hãy kiểm tra thư mục data/raw/ xem đã có file data.csv chưa (nếu chưa, vui lòng tải từ Kaggle và đặt vào đó).
+
+Chạy lệnh sau để bắt đầu huấn luyện và dự đoán:
+```bash
+python main.py
+```
