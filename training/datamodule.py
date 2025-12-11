@@ -219,60 +219,39 @@ class TimeSeriesSplitter:
         
         return X_train, X_test, y_train, y_test
     
-class VisualizationModule:
+def plot_cv_indices(splitter: TimeSeriesSplitter, X: pd.DataFrame, y: pd.Series):
     """
-    VisualizationModule
-    -------------------
-    Chuyên trách vẽ biểu đồ báo cáo cho TSDataSplitter.
+    Vẽ sơ đồ minh họa cách chia dữ liệu Train/Test/Purge.
     """
-    def __init__(self):
-        sns.set_theme(style="whitegrid")
-        self.logger = get_training_logger(self.__class__.__name__)
-        self.logger.info(">>> KHỞI TẠO VISUALIZATION MODULE <<<")
+    logger = get_training_logger("Data Module")
+    splits = list(splitter.split(X, y))
+    n_splits = len(splits)
+    
+    if n_splits == 0:
+        logger.error("Không có fold nào để vẽ!")
+        return
 
-    def plot_cv_indices(self, splitter: TimeSeriesSplitter, X: pd.DataFrame, y: pd.Series):
-        """
-        Vẽ sơ đồ minh họa cách chia dữ liệu Train/Test/Purge.
-        """
-        splits = list(splitter.split(X, y))
-        n_splits = len(splits)
+    logger.info("Vẽ sơ đồ chia dữ liệu Train/Test/Purge...")
+    plt.figure(figsize=(12, n_splits * 0.6))
+    
+    # Vẽ từng fold
+    for i, (train_idx, test_idx) in enumerate(splits):
+        # Lấy index thời gian tương ứng để vẽ trục X cho chuẩn
+        # (Nếu vẽ theo số thứ tự dòng thì dùng train_idx trực tiếp)
         
-        if n_splits == 0:
-            self.logger.error("Không có fold nào để vẽ!")
-            return
-
-        self.logger.info("Vẽ sơ đồ chia dữ liệu Train/Test/Purge...")
-        plt.figure(figsize=(12, n_splits * 0.6))
+        # Vẽ thanh Train (Màu xanh)
+        plt.scatter(train_idx, [i] * len(train_idx), c='#1f77b4', marker='|', s=50, lw=2, label='Train' if i==0 else "")
         
-        # Vẽ từng fold
-        for i, (train_idx, test_idx) in enumerate(splits):
-            # Lấy index thời gian tương ứng để vẽ trục X cho chuẩn
-            # (Nếu vẽ theo số thứ tự dòng thì dùng train_idx trực tiếp)
-            
-            # Vẽ thanh Train (Màu xanh)
-            plt.scatter(train_idx, [i] * len(train_idx), c='#1f77b4', marker='|', s=50, lw=2, label='Train' if i==0 else "")
-            
-            # Vẽ thanh Test (Màu cam)
-            plt.scatter(test_idx, [i] * len(test_idx), c='#ff7f0e', marker='|', s=50, lw=2, label='Test' if i==0 else "")
-            
-            # Khoảng trắng giữa Xanh và Cam là Purge Gap
+        # Vẽ thanh Test (Màu cam)
+        plt.scatter(test_idx, [i] * len(test_idx), c='#ff7f0e', marker='|', s=50, lw=2, label='Test' if i==0 else "")
+        
+        # Khoảng trắng giữa Xanh và Cam là Purge Gap
 
-        plt.title(f"Cross-Validation Strategy: Rolling Window (Purge={splitter.purge})", fontsize=14)
-        plt.xlabel("Sample Index", fontsize=12)
-        plt.ylabel("Fold Number", fontsize=12)
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
-        plt.yticks(range(n_splits), [f"Fold {i}" for i in range(n_splits)])
-        plt.tight_layout()
-        plt.show()
-        self.logger.info("Đã hoàn thành vẽ sơ đồ chia dữ liệu.")
-
-    def plot_predictions(self, y_true, y_pred, title="Model Prediction"):
-        """Vẽ so sánh Giá thực vs Dự báo"""
-        self.logger.info("Vẽ biểu đồ so sánh Giá thực vs Dự báo...")
-        plt.figure(figsize=(15, 6))
-        plt.plot(y_true.values, label='Actual Value', color='black', alpha=0.7)
-        plt.plot(y_pred, label='Predicted Value', color='red', linestyle='--')
-        plt.title(title)
-        plt.legend()
-        plt.show()
-        self.logger.info("Đã hoàn thành vẽ biểu đồ dự báo.")
+    plt.title(f"Cross-Validation Strategy: Rolling Window (Purge={splitter.purge})", fontsize=14)
+    plt.xlabel("Sample Index", fontsize=12)
+    plt.ylabel("Fold Number", fontsize=12)
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    plt.yticks(range(n_splits), [f"Fold {i}" for i in range(n_splits)])
+    plt.tight_layout()
+    plt.show()
+    logger.info("Đã hoàn thành vẽ sơ đồ chia dữ liệu.")

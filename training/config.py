@@ -109,7 +109,7 @@ class ConfigManager:
             "hardware": {
                 "use_gpu": False, "n_jobs": -1
             },
-            "output": {"model_dir": "./models", "result_dir": "./results"}
+            "output": {"model_dir": "./results/models", "metrics_dir": "./results/metrics"}
         }
 
     def get_model_params(self, model_name: str, is_tuning: bool = False) -> Dict[str, Any]:
