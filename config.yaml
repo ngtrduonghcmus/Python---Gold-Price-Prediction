@@ -2,7 +2,7 @@ project:
   name: Gold_Price_Forecast_Pro
   seed: 42
 data:
-  raw_path: data_clean.csv
+  raw_path: data/processed/data_clean.csv
   target_col: Adj Close
   target_transform: log_return
   lags:
@@ -38,5 +38,6 @@ hardware:
   use_gpu: false
   n_jobs: -1
 output:
-  model_dir: ./models
+  model_dir: ./results/models
+  metrics_dir: ./results/metrics
   result_dir: ./results
